@@ -1,0 +1,802 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Amelia Repetto — Portfolio Artístico</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --black: #0a0a0a;
+      --dark: #141414;
+      --gray-dark: #1e1e1e;
+      --gray: #888;
+      --gray-light: #bbb;
+      --white: #f0f0f0;
+      --pink: #e84de8;
+      --pink-dim: #c040c0;
+      --serif: 'Playfair Display', Georgia, serif;
+      --sans: 'Inter', system-ui, sans-serif;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--black);
+      color: var(--white);
+      font-family: var(--sans);
+      font-weight: 300;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ===== NAV ===== */
+    nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 100;
+      padding: 1.2rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: linear-gradient(to bottom, rgba(10,10,10,0.95), transparent);
+      transition: background 0.3s;
+    }
+    nav.scrolled { background: rgba(10,10,10,0.97); backdrop-filter: blur(12px); }
+    .nav-brand {
+      font-family: var(--serif);
+      font-size: 1.1rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: var(--white);
+      text-decoration: none;
+    }
+    .nav-links { display: flex; gap: 1.8rem; list-style: none; }
+    .nav-links a {
+      color: var(--gray-light);
+      text-decoration: none;
+      font-size: 0.75rem;
+      font-weight: 500;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      transition: color 0.2s;
+    }
+    .nav-links a:hover { color: var(--pink); }
+    .nav-burger {
+      display: none;
+      background: none; border: none;
+      color: var(--white); font-size: 1.5rem; cursor: pointer;
+    }
+
+    /* ===== HERO ===== */
+    .hero {
+      height: 100dvh;
+      display: flex;
+      align-items: flex-end;
+      position: relative;
+      overflow: hidden;
+    }
+    .hero-bg {
+      position: absolute; inset: 0;
+      background: url('https://images.unsplash.com/photo-1503095396549-807759245b35?w=1400&q=80') center/cover;
+      filter: brightness(0.4) contrast(1.1);
+    }
+    .hero-content {
+      position: relative;
+      padding: 4rem 3rem;
+      max-width: 700px;
+    }
+    .hero h1 {
+      font-family: var(--serif);
+      font-size: clamp(3rem, 8vw, 6rem);
+      font-weight: 900;
+      line-height: 0.95;
+      margin-bottom: 1rem;
+    }
+    .hero h1 span { display: block; }
+    .hero-tagline {
+      font-size: 1rem;
+      color: var(--gray-light);
+      font-weight: 300;
+      letter-spacing: 0.02em;
+      margin-bottom: 2rem;
+    }
+    .hero-scroll {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      color: var(--pink);
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.15em;
+      text-decoration: none;
+      font-weight: 500;
+    }
+    .hero-scroll::after {
+      content: '↓';
+      font-size: 1rem;
+      animation: bounce 2s infinite;
+    }
+    @keyframes bounce {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(4px); }
+    }
+
+    /* ===== SECTION COMMON ===== */
+    section { padding: 6rem 2rem; }
+    .section-label {
+      font-size: 0.65rem;
+      text-transform: uppercase;
+      letter-spacing: 0.2em;
+      color: var(--pink);
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+    }
+    .section-title {
+      font-family: var(--serif);
+      font-size: clamp(2.2rem, 5vw, 3.5rem);
+      font-weight: 900;
+      margin-bottom: 2rem;
+      line-height: 1.1;
+    }
+    .container { max-width: 1200px; margin: 0 auto; }
+
+    /* ===== BIO ===== */
+    .bio { background: var(--dark); }
+    .bio-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 4rem;
+      align-items: start;
+    }
+    .bio-text p {
+      color: var(--gray-light);
+      margin-bottom: 1.2rem;
+      font-size: 0.95rem;
+    }
+    .bio-text .highlight {
+      color: var(--white);
+      font-weight: 400;
+      font-size: 1.15rem;
+      line-height: 1.5;
+      margin-bottom: 1.5rem;
+    }
+    .bio-image {
+      aspect-ratio: 3/4;
+      background: url('https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=800&q=80') center/cover;
+      border-radius: 2px;
+    }
+    .bio-contact {
+      margin-top: 2rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid rgba(255,255,255,0.08);
+      display: flex;
+      gap: 2rem;
+      flex-wrap: wrap;
+    }
+    .bio-contact a {
+      color: var(--gray);
+      font-size: 0.8rem;
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+    .bio-contact a:hover { color: var(--pink); }
+
+    /* ===== WORKS GRID ===== */
+    .works-section { background: var(--black); }
+    .works-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+      gap: 1.5rem;
+    }
+    .work-card {
+      position: relative;
+      overflow: hidden;
+      border-radius: 2px;
+      cursor: pointer;
+      aspect-ratio: 16/10;
+      background: var(--gray-dark);
+    }
+    .work-card img {
+      width: 100%; height: 100%;
+      object-fit: cover;
+      transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1), filter 0.4s;
+      filter: brightness(0.7) saturate(0.9);
+    }
+    .work-card:hover img {
+      transform: scale(1.05);
+      filter: brightness(0.5) saturate(1);
+    }
+    .work-card-overlay {
+      position: absolute; inset: 0;
+      display: flex; flex-direction: column;
+      justify-content: flex-end;
+      padding: 1.5rem;
+      background: linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 60%);
+    }
+    .work-card-year {
+      font-size: 0.65rem;
+      color: var(--pink);
+      text-transform: uppercase;
+      letter-spacing: 0.15em;
+      font-weight: 600;
+    }
+    .work-card-title {
+      font-family: var(--serif);
+      font-size: 1.3rem;
+      font-weight: 700;
+      margin-top: 0.2rem;
+    }
+    .work-card-role {
+      font-size: 0.75rem;
+      color: var(--gray);
+      margin-top: 0.3rem;
+    }
+    .work-card-links {
+      display: flex;
+      gap: 0.8rem;
+      margin-top: 0.8rem;
+      opacity: 0;
+      transform: translateY(8px);
+      transition: all 0.3s;
+    }
+    .work-card:hover .work-card-links {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    .work-card-links a {
+      font-size: 0.65rem;
+      color: var(--white);
+      text-decoration: none;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      padding: 0.3rem 0.7rem;
+      border: 1px solid rgba(255,255,255,0.3);
+      border-radius: 2px;
+      transition: all 0.2s;
+    }
+    .work-card-links a:hover {
+      background: var(--pink);
+      border-color: var(--pink);
+    }
+
+    /* ===== FEATURED WORK (full width) ===== */
+    .featured-work {
+      min-height: 80vh;
+      display: flex;
+      align-items: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .featured-work-bg {
+      position: absolute; inset: 0;
+      background-size: cover;
+      background-position: center;
+      filter: brightness(0.35);
+    }
+    .featured-work-content {
+      position: relative;
+      padding: 4rem 3rem;
+      max-width: 600px;
+    }
+    .featured-work-content .section-label { margin-bottom: 1rem; }
+    .featured-work-content h2 {
+      font-family: var(--serif);
+      font-size: clamp(2.5rem, 6vw, 4rem);
+      font-weight: 900;
+      line-height: 1;
+      margin-bottom: 1rem;
+    }
+    .featured-work-content .year {
+      color: var(--gray);
+      font-size: 0.85rem;
+      margin-bottom: 1.5rem;
+    }
+    .featured-work-content p {
+      color: var(--gray-light);
+      font-size: 0.9rem;
+      margin-bottom: 2rem;
+      font-style: italic;
+    }
+    .btn-links { display: flex; gap: 0.8rem; flex-wrap: wrap; }
+    .btn-link {
+      display: inline-block;
+      padding: 0.6rem 1.5rem;
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      text-decoration: none;
+      color: var(--white);
+      border: 1px solid rgba(255,255,255,0.25);
+      border-radius: 2px;
+      font-weight: 500;
+      transition: all 0.2s;
+    }
+    .btn-link:hover { background: var(--pink); border-color: var(--pink); }
+    .btn-link.primary { background: var(--pink); border-color: var(--pink); }
+    .btn-link.primary:hover { background: var(--pink-dim); border-color: var(--pink-dim); }
+
+    /* ===== SECTION DIVIDER ===== */
+    .section-divider {
+      text-align: center;
+      padding: 3rem 2rem;
+      background: var(--black);
+    }
+    .section-divider .marker {
+      color: var(--pink);
+      font-size: 0.7rem;
+      letter-spacing: 0.3em;
+    }
+
+    /* ===== PRESS ===== */
+    .press { background: var(--dark); }
+    .press-list { list-style: none; }
+    .press-item {
+      padding: 1.2rem 0;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 2rem;
+    }
+    .press-item a {
+      color: var(--white);
+      text-decoration: none;
+      font-size: 0.9rem;
+      transition: color 0.2s;
+    }
+    .press-item a:hover { color: var(--pink); }
+    .press-meta {
+      font-size: 0.75rem;
+      color: var(--gray);
+      white-space: nowrap;
+    }
+
+    /* ===== CONTACT ===== */
+    .contact { background: var(--black); text-align: center; }
+    .contact .section-title { margin-bottom: 1rem; }
+    .contact-email {
+      font-family: var(--serif);
+      font-size: clamp(1.2rem, 3vw, 1.8rem);
+      color: var(--white);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+    .contact-email:hover { color: var(--pink); }
+    .contact-details {
+      margin-top: 1.5rem;
+      color: var(--gray);
+      font-size: 0.85rem;
+    }
+    .social-links {
+      display: flex;
+      justify-content: center;
+      gap: 2rem;
+      margin-top: 2rem;
+    }
+    .social-links a {
+      color: var(--gray);
+      text-decoration: none;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      font-weight: 500;
+      transition: color 0.2s;
+    }
+    .social-links a:hover { color: var(--pink); }
+
+    /* ===== FOOTER ===== */
+    footer {
+      padding: 2rem;
+      text-align: center;
+      font-size: 0.7rem;
+      color: rgba(255,255,255,0.2);
+      border-top: 1px solid rgba(255,255,255,0.04);
+    }
+
+    /* ===== RESPONSIVE ===== */
+    @media (max-width: 768px) {
+      nav { padding: 1rem 1.2rem; }
+      .nav-links { display: none; }
+      .nav-links.open {
+        display: flex;
+        flex-direction: column;
+        position: absolute;
+        top: 100%; left: 0; right: 0;
+        background: rgba(10,10,10,0.98);
+        padding: 1.5rem 2rem;
+        gap: 1.2rem;
+      }
+      .nav-burger { display: block; }
+
+      section { padding: 4rem 1.2rem; }
+      .hero-content { padding: 3rem 1.5rem; }
+      .bio-grid { grid-template-columns: 1fr; gap: 2rem; }
+      .bio-image { aspect-ratio: 4/3; order: -1; }
+      .works-grid { grid-template-columns: 1fr; }
+      .featured-work-content { padding: 3rem 1.5rem; }
+      .press-item { flex-direction: column; gap: 0.3rem; }
+    }
+
+    /* ===== ANIMATIONS ===== */
+    .fade-up {
+      opacity: 0;
+      transform: translateY(30px);
+      transition: opacity 0.7s, transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .fade-up.visible { opacity: 1; transform: translateY(0); }
+  </style>
+</head>
+<body>
+
+  <!-- NAV -->
+  <nav id="nav">
+    <a href="#" class="nav-brand">Amelia Repetto</a>
+    <button class="nav-burger" onclick="document.querySelector('.nav-links').classList.toggle('open')" aria-label="Menu">&#9776;</button>
+    <ul class="nav-links">
+      <li><a href="#bio">Bio</a></li>
+      <li><a href="#teatro">Teatro</a></li>
+      <li><a href="#performance">Performance</a></li>
+      <li><a href="#cine">Cine</a></li>
+      <li><a href="#talleres">Talleres</a></li>
+      <li><a href="#prensa">Prensa</a></li>
+      <li><a href="#contacto">Contacto</a></li>
+    </ul>
+  </nav>
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="hero-bg"></div>
+    <div class="hero-content">
+      <h1>
+        <span>Amelia</span>
+        <span>Repetto</span>
+      </h1>
+      <p class="hero-tagline">Actriz &middot; Directora de teatro &middot; Psiquiatra especializada en arte y salud mental</p>
+      <a href="#bio" class="hero-scroll">Descubrir</a>
+    </div>
+  </section>
+
+  <!-- BIO -->
+  <section class="bio" id="bio">
+    <div class="container">
+      <div class="bio-grid">
+        <div class="bio-text fade-up">
+          <p class="section-label">Biografía</p>
+          <p class="highlight">Actriz, directora de teatro y psiquiatra especializada en arte y salud mental. Argentina residente en Madrid. Miembro de ARTEA.</p>
+          <p>Se formó como actriz en la Universidad Nacional de las Artes (UNA), departamento de Dramáticas. En 2022 realizó el Máster en Práctica Escénica y Cultura Visual del Museo Nacional Reina Sofía y la Universidad de Castilla-La Mancha.</p>
+          <p>En 2024 fue artista residente de Tejidos Conjuntivos del Museo Reina Sofía, bajo la dirección de Germán Labrador. Actualmente dicta talleres y laboratorios de artes escénicas en el Centro de Arte Dos de Mayo (CA2M).</p>
+          <p>Complementó su formación actoral con Carlota Ferrer (Madrid), Claudia Cantero, Ricardo Bartis, Federico León, Alejandro Catalán, Guillermo Angeleli, Alfredo Castro (Chile) y Lito Cruz.</p>
+          <div class="bio-contact">
+            <a href="mailto:amelia.repetto@gmail.com">amelia.repetto@gmail.com</a>
+            <a href="tel:+34666137644">+34 666 137 644</a>
+            <a href="#">Madrid, España</a>
+          </div>
+        </div>
+        <div class="bio-image fade-up"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FEATURED: Vitis Vinífera -->
+  <section class="featured-work">
+    <div class="featured-work-bg" style="background-image: url('https://images.unsplash.com/photo-1507676184212-d03ab07a01bf?w=1400&q=80')"></div>
+    <div class="featured-work-content fade-up">
+      <p class="section-label">Teatro — Estreno 2025</p>
+      <h2>Vitis Vinífera</h2>
+      <p class="year">Festival SURGE de Madrid en Otoño</p>
+      <p>"Dicen que siempre hay algo de locura en el amor. Pero siempre hay algo de razón en la locura. El amor es locura o no es nada."</p>
+      <div class="btn-links">
+        <a href="#" class="btn-link primary">Ver trailer</a>
+        <a href="#" class="btn-link">Obra completa</a>
+        <a href="#" class="btn-link">Dossier</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- TEATRO -->
+  <section class="works-section" id="teatro">
+    <div class="container">
+      <p class="section-label fade-up">Teatro</p>
+      <h2 class="section-title fade-up">Obras de teatro</h2>
+      <div class="works-grid">
+
+        <div class="work-card fade-up">
+          <img src="https://images.unsplash.com/photo-1503095396549-807759245b35?w=700&q=75" alt="" loading="lazy">
+          <div class="work-card-overlay">
+            <span class="work-card-year">2024</span>
+            <h3 class="work-card-title">Romance de la Negra Rubia</h3>
+            <p class="work-card-role">Actriz &middot; Ciclo Teatro Argentino, Madrid</p>
+            <div class="work-card-links">
+              <a href="#">Trailer</a>
+              <a href="#">Dossier</a>
+            </div>
+          </div>
+        </div>
+
+        <div class="work-card fade-up">
+          <img src="https://images.unsplash.com/photo-1547153760-18fc86324498?w=700&q=75" alt="" loading="lazy">
+          <div class="work-card-overlay">
+            <span class="work-card-year">2025</span>
+            <h3 class="work-card-title">Lavapiés</h3>
+            <p class="work-card-role">Dir. Fernando Ferrer &middot; Teatro del Barrio</p>
+            <div class="work-card-links">
+              <a href="#">Ver más</a>
+            </div>
+          </div>
+        </div>
+
+        <div class="work-card fade-up">
+          <img src="https://images.unsplash.com/photo-1518834107812-67b0b7c58434?w=700&q=75" alt="" loading="lazy">
+          <div class="work-card-overlay">
+            <span class="work-card-year">2021</span>
+            <h3 class="work-card-title">La débil mental</h3>
+            <p class="work-card-role">Asistencia artística &middot; Dir. Cristina Banegas</p>
+            <div class="work-card-links">
+              <a href="#">Prensa</a>
+            </div>
+          </div>
+        </div>
+
+        <div class="work-card fade-up">
+          <img src="https://images.unsplash.com/photo-1460723237483-7a6dc9d0b212?w=700&q=75" alt="" loading="lazy">
+          <div class="work-card-overlay">
+            <span class="work-card-year">2019–2021</span>
+            <h3 class="work-card-title">Las cuerdas</h3>
+            <p class="work-card-role">Actriz &middot; Dir. Ana Schimelman</p>
+            <div class="work-card-links">
+              <a href="#">Ficha</a>
+              <a href="#">Prensa</a>
+            </div>
+          </div>
+        </div>
+
+        <div class="work-card fade-up">
+          <img src="https://images.unsplash.com/photo-1514306191717-452ec28c7814?w=700&q=75" alt="" loading="lazy">
+          <div class="work-card-overlay">
+            <span class="work-card-year">2019</span>
+            <h3 class="work-card-title">El péndulo</h3>
+            <p class="work-card-role">Actriz protagónica &middot; CCGSM &middot; Festival Fauna</p>
+            <div class="work-card-links">
+              <a href="#">Ver más</a>
+            </div>
+          </div>
+        </div>
+
+        <div class="work-card fade-up">
+          <img src="https://images.unsplash.com/photo-1507676184212-d03ab07a01bf?w=700&q=75" alt="" loading="lazy">
+          <div class="work-card-overlay">
+            <span class="work-card-year">2018</span>
+            <h3 class="work-card-title">Amor, mentiras y dinero</h3>
+            <p class="work-card-role">Actriz protagónica &middot; Microteatro BA</p>
+            <div class="work-card-links">
+              <a href="#">Ficha</a>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- DIVIDER -->
+  <div class="section-divider"><span class="marker">&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;</span></div>
+
+  <!-- PERFORMANCE -->
+  <section class="works-section" id="performance">
+    <div class="container">
+      <p class="section-label fade-up">Performance</p>
+      <h2 class="section-title fade-up">Performance &amp; Instalaciones</h2>
+      <div class="works-grid">
+
+        <div class="work-card fade-up">
+          <img src="https://images.unsplash.com/photo-1541701494587-cb58502866ab?w=700&q=75" alt="" loading="lazy">
+          <div class="work-card-overlay">
+            <span class="work-card-year">2024</span>
+            <h3 class="work-card-title">BZD El Entierro</h3>
+            <p class="work-card-role">Creadora &middot; Museo Reina Sofía</p>
+            <div class="work-card-links">
+              <a href="#">Trailer</a>
+              <a href="#">Obra completa</a>
+            </div>
+          </div>
+        </div>
+
+        <div class="work-card fade-up">
+          <img src="https://images.unsplash.com/photo-1482245294234-b3f2f8d5f1a4?w=700&q=75" alt="" loading="lazy">
+          <div class="work-card-overlay">
+            <span class="work-card-year">2023–2024</span>
+            <h3 class="work-card-title">BZD Hasta los huesos</h3>
+            <p class="work-card-role">Creadora &middot; Festival Subterráneo, México DF</p>
+            <div class="work-card-links">
+              <a href="#">Investigación</a>
+            </div>
+          </div>
+        </div>
+
+        <div class="work-card fade-up">
+          <img src="https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=700&q=75" alt="" loading="lazy">
+          <div class="work-card-overlay">
+            <span class="work-card-year">2023</span>
+            <h3 class="work-card-title">Artificio para atravesar la psicosis</h3>
+            <p class="work-card-role">Creadora &middot; Auditorio Sabatini, Museo Reina Sofía</p>
+            <div class="work-card-links">
+              <a href="#">Dossier</a>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- FEATURED: BZD -->
+  <section class="featured-work">
+    <div class="featured-work-bg" style="background-image: url('https://images.unsplash.com/photo-1541701494587-cb58502866ab?w=1400&q=80')"></div>
+    <div class="featured-work-content fade-up">
+      <p class="section-label">Performance — Destacada</p>
+      <h2>BZD El Entierro</h2>
+      <p class="year">2024 &middot; Museo Reina Sofía &middot; Tejidos Conjuntivos</p>
+      <p>Instalación escénica, performance site specific y cine de 16mm. Bajo la dirección de Germán Labrador.</p>
+      <div class="btn-links">
+        <a href="#" class="btn-link primary">Ver trailer</a>
+        <a href="#" class="btn-link">Obra completa</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- CINE -->
+  <section class="works-section" id="cine">
+    <div class="container">
+      <p class="section-label fade-up">Cine &amp; TV</p>
+      <h2 class="section-title fade-up">Cine &amp; Videoclips</h2>
+      <div class="works-grid">
+
+        <div class="work-card fade-up">
+          <img src="https://images.unsplash.com/photo-1485846234645-a62644f84728?w=700&q=75" alt="" loading="lazy">
+          <div class="work-card-overlay">
+            <span class="work-card-year">Serie</span>
+            <h3 class="work-card-title">Inconsciente colectivo</h3>
+            <p class="work-card-role">Amazon Prime Video</p>
+          </div>
+        </div>
+
+        <div class="work-card fade-up">
+          <img src="https://images.unsplash.com/photo-1478720568477-152d9b164e26?w=700&q=75" alt="" loading="lazy">
+          <div class="work-card-overlay">
+            <span class="work-card-year">Largometraje</span>
+            <h3 class="work-card-title">Noemí Gold</h3>
+            <p class="work-card-role">Amazon Prime Video</p>
+          </div>
+        </div>
+
+        <div class="work-card fade-up">
+          <img src="https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=700&q=75" alt="" loading="lazy">
+          <div class="work-card-overlay">
+            <span class="work-card-year">Serie</span>
+            <h3 class="work-card-title">Crónicas ferreteras</h3>
+            <p class="work-card-role">Cinearplay</p>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- TALLERES -->
+  <section class="works-section" id="talleres" style="background: var(--dark);">
+    <div class="container">
+      <p class="section-label fade-up">Talleres &amp; Salud Mental</p>
+      <h2 class="section-title fade-up">Talleres &amp; Laboratorios</h2>
+      <div class="works-grid">
+
+        <div class="work-card fade-up" style="aspect-ratio: 16/9;">
+          <img src="https://images.unsplash.com/photo-1524178232363-1fb2b075b655?w=700&q=75" alt="" loading="lazy">
+          <div class="work-card-overlay">
+            <span class="work-card-year">En curso</span>
+            <h3 class="work-card-title">Laboratorios de artes escénicas</h3>
+            <p class="work-card-role">Centro de Arte Dos de Mayo (CA2M)</p>
+          </div>
+        </div>
+
+        <div class="work-card fade-up" style="aspect-ratio: 16/9;">
+          <img src="https://images.unsplash.com/photo-1509909756405-be0199881695?w=700&q=75" alt="" loading="lazy">
+          <div class="work-card-overlay">
+            <span class="work-card-year">Salud Mental</span>
+            <h3 class="work-card-title">Intervenciones en penal de Ezeiza</h3>
+            <p class="work-card-role">Arte y salud mental en pabellón psiquiátrico</p>
+            <div class="work-card-links">
+              <a href="#">Trato por igual</a>
+              <a href="#">Ver clase</a>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- PRENSA -->
+  <section class="press" id="prensa">
+    <div class="container">
+      <p class="section-label fade-up">Notas</p>
+      <h2 class="section-title fade-up">Prensa</h2>
+      <ul class="press-list fade-up">
+        <li class="press-item">
+          <a href="#">De Buenos Aires a Madrid sin escalas: la psiquiatra argentina que abandonó una profesión de 11 años por amor al teatro</a>
+          <span class="press-meta">El Mundo &middot; Sep 2023</span>
+        </li>
+        <li class="press-item">
+          <a href="#">Amelia Repetto presentó "Artificio para atravesar la psicosis y los cuerpos dóciles"</a>
+          <span class="press-meta">Maescena &middot; May 2023</span>
+        </li>
+        <li class="press-item">
+          <a href="#">La psiquiatra que dejó todo por el teatro: "Dio sentido a mi existencia"</a>
+          <span class="press-meta">Gran Madrid &middot; 2024</span>
+        </li>
+        <li class="press-item">
+          <a href="#">Las cuerdas — Nota Suplemento Radar</a>
+          <span class="press-meta">Página 12</span>
+        </li>
+        <li class="press-item">
+          <a href="#">Las cuerdas — Crítica</a>
+          <span class="press-meta">La Nación</span>
+        </li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- CONTACTO -->
+  <section class="contact" id="contacto">
+    <div class="container fade-up">
+      <p class="section-label">Contacto</p>
+      <h2 class="section-title">Hablemos</h2>
+      <a href="mailto:amelia.repetto@gmail.com" class="contact-email">amelia.repetto@gmail.com</a>
+      <p class="contact-details">+34 666 137 644 &middot; Madrid, España</p>
+      <div class="social-links">
+        <a href="#">Instagram</a>
+        <a href="#">Facebook</a>
+        <a href="#">Vimeo</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer>
+    Amelia Repetto &middot; Portfolio artístico &middot; 2026
+  </footer>
+
+  <!-- MINIMAL JS: scroll animations + nav -->
+  <script>
+    // Nav background on scroll
+    const nav = document.getElementById('nav');
+    window.addEventListener('scroll', () => {
+      nav.classList.toggle('scrolled', window.scrollY > 60);
+    }, { passive: true });
+
+    // Close mobile menu on link click
+    document.querySelectorAll('.nav-links a').forEach(a => {
+      a.addEventListener('click', () => {
+        document.querySelector('.nav-links').classList.remove('open');
+      });
+    });
+
+    // Fade-up on scroll (IntersectionObserver)
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(e => {
+        if (e.isIntersecting) {
+          e.target.classList.add('visible');
+          observer.unobserve(e.target);
+        }
+      });
+    }, { threshold: 0.15 });
+
+    document.querySelectorAll('.fade-up').forEach(el => observer.observe(el));
+  </script>
+
+</body>
+</html>
