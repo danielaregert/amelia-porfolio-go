@@ -225,6 +225,81 @@ curl https://ameporfolio.danielaregert.com.ar/api/collections/works/records
 
 ---
 
+## Seguridad
+
+Capas aplicadas (ver commit `Hardening de seguridad` para detalle):
+
+### Autenticación y sesión
+- Login contra `_superusers` de PocketBase con hash bcrypt.
+- Sesión por cookie `admin_session` con `HttpOnly`, `Secure` (cuando hay TLS)
+  y `SameSite=Lax`. Token estático de PB con vencimiento a 7 días.
+- Rate limiting del login: 5 intentos fallidos / 15 min → bloqueo 30 min
+  (`internal/ratelimit/login.go`).
+
+### Identificación de IP (anti-spoofing)
+`ClientIP` toma la IP en este orden: `CF-Connecting-IP` (Cloudflare Tunnel) →
+último hop de `X-Forwarded-For` (el que agrega nuestro Caddy) → `X-Real-IP` →
+`RemoteAddr`. **No** se usa el primer valor de XFF porque es spoofeable por
+el cliente.
+
+### CSRF
+Todos los `POST` del admin pasan por `csrfGuard`
+(`internal/handlers/middleware.go`), que valida que `Origin` o `Referer`
+coincidan con el `Host` del request. Combinado con `SameSite=Lax` cubre el
+vector CSRF cross-site sin necesitar tokens por formulario.
+
+### Headers de seguridad (doble capa)
+Emitidos por el middleware Go en cada response y también por el bloque
+`header { ... }` del `Caddyfile.snippet`:
+
+- `X-Frame-Options: DENY` (anti-clickjacking)
+- `X-Content-Type-Options: nosniff`
+- `Referrer-Policy: strict-origin-when-cross-origin`
+- `Permissions-Policy: geolocation=(), microphone=(), camera=()`
+
+HSTS lo emite Cloudflare al terminar TLS, por eso no lo ponemos en Caddy.
+
+### Uploads
+`uploadedFile` / `uploadedFiles` (`internal/handlers/admin.go`) detectan el
+MIME real por magic bytes (`http.DetectContentType` sobre los primeros 512
+bytes) e imponen allowlist por campo:
+
+| Campo                                  | MIME permitido     |
+|----------------------------------------|--------------------|
+| `cover_image`, `images`, `profile_image`, `hero_image`, `hero_images`, `og_image` | `image/*` |
+| `video`                                | `video/*`          |
+| `dossier`                              | `application/pdf`  |
+
+### Sanitización HTML
+- **Al escribir:** `sanitize.HTML` (bluemonday `UGCPolicy`) en todos los
+  campos ricos (bio, descripciones, excerpts) antes de guardar.
+- **Al leer:** `safeHTML()` en `loadPubSite` re-aplica la misma política,
+  para proteger ante edición directa de la DB o escritura via API de PB.
+
+### XSS
+- `renderLogin` escapea mensajes de error con `html.EscapeString`.
+- El lightbox del frontend construye imágenes con `createElement('img')`
+  + asignación de `src`, sin `innerHTML`.
+- Templates Go (`html/template`, `templ`) escapan por default todo lo que
+  no es `template.HTML` explícito.
+
+### Pendiente / mejoras futuras
+
+- **SRI en CDNs:** HTMX, Alpine.js, Tailwind CDN y Google Fonts se cargan
+  sin `integrity="sha384-..."`. HTMX y Alpine lo soportan (versión fija);
+  Tailwind play CDN y Google Fonts sirven contenido dinámico y no se pueden
+  firmar con SRI. Mejora: compilar Tailwind localmente y embeber HTMX/Alpine
+  con hash, para eliminar dependencia de CDNs de terceros.
+- **Content-Security-Policy:** hoy no hay CSP. Agregar una política estricta
+  requiere primero mover los scripts inline (`<script>` del lightbox,
+  config de Tailwind) a archivos externos con nonce, o usar `'unsafe-inline'`
+  (que anula buena parte del valor de CSP).
+- **Aplicar el bloque `header` del `deploy/Caddyfile.snippet` al Caddyfile
+  real del Pi.** Hoy los headers los pone Go, así que el sitio ya está
+  protegido; agregarlo en Caddy es defensa en profundidad.
+
+---
+
 ## Checklist antes de shippear cambios importantes
 
 - [ ] `go build ./...` sin errores.
