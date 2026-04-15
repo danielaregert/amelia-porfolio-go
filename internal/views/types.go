@@ -12,15 +12,17 @@ type AdminSectionRow struct {
 }
 
 type AdminSectionForm struct {
-	IsNew       bool
-	ID          string
-	Name        string
-	Slug        string
-	Description string
-	SortOrder   int
-	Active      bool
-	CoverURL    string
-	Error       string
+	IsNew         bool
+	ID            string
+	Name          string
+	NameEN        string
+	Slug          string
+	Description   string
+	DescriptionEN string
+	SortOrder     int
+	Active        bool
+	CoverURL      string
+	Error         string
 }
 
 type AdminWorkRow struct {
@@ -38,23 +40,27 @@ type AdminWorkRow struct {
 }
 
 type AdminWorkForm struct {
-	IsNew       bool
-	ID          string
-	SectionID   string
-	SectionName string
-	Title       string
-	Slug        string
-	Year        string
-	Role        string
-	Description string
-	Credits     string
-	SortOrder   int
-	Active      bool
-	Featured    bool
-	Images      []AdminImage
-	Links       []AdminWorkLink
-	Error       string
-	Sections    []SectionOption
+	IsNew         bool
+	ID            string
+	SectionID     string
+	SectionName   string
+	Title         string
+	TitleEN       string
+	Slug          string
+	Year          string
+	Role          string
+	RoleEN        string
+	Description   string
+	DescriptionEN string
+	Credits       string
+	CreditsEN     string
+	SortOrder     int
+	Active        bool
+	Featured      bool
+	Images        []AdminImage
+	Links         []AdminWorkLink
+	Error         string
+	Sections      []SectionOption
 }
 
 type AdminImage struct {
@@ -87,18 +93,23 @@ type AdminPressForm struct {
 	IsNew       bool
 	ID          string
 	Title       string
+	TitleEN     string
 	Publication string
 	URL         string
 	Date        string
 	Excerpt     string
+	ExcerptEN   string
 	SortOrder   int
 	Active      bool
 	Error       string
 }
 
 type AdminSettingsForm struct {
-	SiteName     string
-	TagLine      string
+	SiteName           string
+	TagLine            string
+	TagLineEN          string
+	MetaDescription    string
+	MetaDescriptionEN  string
 	BioES        string
 	BioEN        string
 	Email        string
@@ -112,6 +123,7 @@ type AdminSettingsForm struct {
 	ReelURL      string
 	ProfileImage string
 	HeroImage    string
+	OGImage      string
 	HeroImages   []AdminImage
 	ShowAddress  bool
 	Error        string

@@ -9,33 +9,73 @@ templ AdminLayout(email string, title string) {
 	<html lang="es">
 	<head>
 		<meta charset="UTF-8"/>
-		<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-		<title>{ title } — Admin</title>
+		<meta name="viewport" content="width=device-width,initial-scale=1"/>
+		<title>{ title } — Admin · Amelia</title>
 		<script src="https://unpkg.com/htmx.org@2.0.3"></script>
-		<link href="https://cdn.jsdelivr.net/npm/tailwindcss@3.4/dist/tailwind.min.css" rel="stylesheet"/>
+		<script src="https://cdn.tailwindcss.com"></script>
+		<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.1/dist/cdn.min.js"></script>
+		<link rel="preconnect" href="https://fonts.googleapis.com"/>
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+		<link href="https://fonts.googleapis.com/css2?family=Roboto+Slab:wght@300..900&display=swap" rel="stylesheet"/>
 		<style>
-			body { font-family: system-ui, -apple-system, sans-serif; }
+			[x-cloak]{display:none!important}
+			body{font-family:'Roboto Slab',Georgia,serif}
+			.nav-item.active{background:#1e293b;color:#fff}
+			.nav-item.active svg{color:#fff}
 		</style>
 	</head>
-	<body class="bg-gray-50 min-h-screen">
-		<nav class="bg-gray-900 text-white px-6 py-3 flex items-center justify-between">
-			<div class="flex items-center gap-6">
-				<a href="/admin" class="font-bold text-lg">Portfolio Admin</a>
-				<a href="/admin" class="text-gray-300 hover:text-white text-sm">Secciones</a>
-				<a href="/admin/works" class="text-gray-300 hover:text-white text-sm">Obras</a>
-				<a href="/admin/press" class="text-gray-300 hover:text-white text-sm">Prensa</a>
-				<a href="/admin/settings" class="text-gray-300 hover:text-white text-sm">Config</a>
+	<body class="bg-slate-100 min-h-screen text-slate-800">
+		<div x-data="{open:true,mobile:false}" class="flex min-h-screen">
+			<div x-show="mobile" x-cloak @click="mobile=false" x-transition.opacity class="lg:hidden fixed inset-0 bg-slate-900/50 z-20"></div>
+			<aside :class="{'w-64':open,'w-20':!open,'translate-x-0':mobile,'-translate-x-full':!mobile}" class="fixed lg:static lg:translate-x-0 z-30 h-screen flex flex-col bg-slate-900 text-slate-300 transition-all duration-300">
+				<div class="h-16 flex items-center px-5 border-b border-slate-800/70 shrink-0">
+					<a href="/admin" class="font-bold text-white tracking-wide" x-show="open">Amelia · Admin</a>
+					<a href="/admin" class="font-bold text-white text-xl mx-auto" x-show="!open" x-cloak>A</a>
+				</div>
+				<nav id="admin-nav" class="flex-1 overflow-y-auto p-3 space-y-1 text-sm">
+					<a href="/admin" data-path="/admin" class="nav-item flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-slate-800 hover:text-white transition">
+						<svg class="w-5 h-5 shrink-0 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6h16.5M3.75 12h16.5M3.75 18h16.5"/></svg>
+						<span x-show="open">Secciones</span>
+					</a>
+					<a href="/admin/works" data-path="/admin/works" class="nav-item flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-slate-800 hover:text-white transition">
+						<svg class="w-5 h-5 shrink-0 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="m15.75 10.5 4.72-4.72a.75.75 0 0 1 1.28.53v11.38a.75.75 0 0 1-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 0 0 2.25-2.25v-9a2.25 2.25 0 0 0-2.25-2.25h-9A2.25 2.25 0 0 0 2.25 7.5v9a2.25 2.25 0 0 0 2.25 2.25z"/></svg>
+						<span x-show="open">Obras</span>
+					</a>
+					<a href="/admin/press" data-path="/admin/press" class="nav-item flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-slate-800 hover:text-white transition">
+						<svg class="w-5 h-5 shrink-0 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25"/></svg>
+						<span x-show="open">Prensa</span>
+					</a>
+					<a href="/admin/settings" data-path="/admin/settings" class="nav-item flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-slate-800 hover:text-white transition">
+						<svg class="w-5 h-5 shrink-0 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.325.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 0 1 1.37.49l1.296 2.247a1.125 1.125 0 0 1-.26 1.431l-1.003.827c-.293.241-.438.613-.43.992a6.759 6.759 0 0 1 0 .255c-.008.378.137.75.43.991l1.004.827c.424.35.534.954.26 1.43l-1.297 2.247a1.125 1.125 0 0 1-1.369.491l-1.217-.456c-.356-.133-.751-.072-1.076.124a6.57 6.57 0 0 1-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.019-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 0 1-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 0 1-1.369-.49l-1.297-2.247a1.125 1.125 0 0 1 .26-1.431l1.004-.827c.292-.24.437-.613.43-.991a6.932 6.932 0 0 1 0-.255c.007-.38-.137-.751-.43-.992l-1.004-.827a1.125 1.125 0 0 1-.26-1.43l1.297-2.247a1.125 1.125 0 0 1 1.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.086.22-.128.332-.183.582-.495.644-.869l.214-1.281z"/><circle cx="12" cy="12" r="3"/></svg>
+						<span x-show="open">Configuración</span>
+					</a>
+					<div class="border-t border-slate-800/70 my-3"></div>
+					<a href="/" target="_blank" class="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-slate-800 hover:text-white transition">
+						<svg class="w-5 h-5 shrink-0 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6H5.25A2.25 2.25 0 0 0 3 8.25v10.5A2.25 2.25 0 0 0 5.25 21h10.5A2.25 2.25 0 0 0 18 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25"/></svg>
+						<span x-show="open">Ver sitio</span>
+					</a>
+				</nav>
+			</aside>
+			<div class="flex-1 flex flex-col min-w-0">
+				<header class="h-16 bg-white border-b border-slate-200 px-4 lg:px-6 flex items-center justify-between shrink-0">
+					<div class="flex items-center gap-2">
+						<button @click="mobile=!mobile" class="lg:hidden p-2 -ml-2 text-slate-600 hover:text-slate-900"><svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/></svg></button>
+						<button @click="open=!open" class="hidden lg:inline-flex p-2 text-slate-500 hover:text-slate-900"><svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/></svg></button>
+					</div>
+					<div class="flex items-center gap-3">
+						<div class="w-9 h-9 rounded-full bg-slate-800 text-white flex items-center justify-center text-xs font-bold">AR</div>
+						<span class="text-slate-500 text-sm hidden sm:inline">{ email }</span>
+						<form method="POST" action="/admin/logout"><button type="submit" class="text-xs uppercase tracking-wider text-slate-500 hover:text-slate-900 px-2 py-1 border border-slate-200 rounded">Salir</button></form>
+					</div>
+				</header>
+				<main class="p-4 lg:p-8 flex-1 overflow-x-hidden"><div class="max-w-6xl mx-auto">
+					{ children... }
+				</div></main>
 			</div>
-			<div class="flex items-center gap-4">
-				<span class="text-gray-400 text-sm">{ email }</span>
-				<form method="POST" action="/admin/logout">
-					<button type="submit" class="text-gray-400 hover:text-white text-sm">Salir</button>
-				</form>
-			</div>
-		</nav>
-		<main class="max-w-6xl mx-auto px-6 py-8">
-			{ children... }
-		</main>
+		</div>
+		<script>
+			(function(){var p=location.pathname;document.querySelectorAll('.nav-item').forEach(function(a){var d=a.getAttribute('data-path');if(!d)return;if(p===d||(d!=='/admin'&&p.indexOf(d)===0))a.classList.add('active');if(d==='/admin'&&p==='/admin')a.classList.add('active')})})();
+		</script>
 	</body>
 	</html>
 }
@@ -155,18 +195,31 @@ templ AdminSectionFormPage(email string, f AdminSectionForm) {
 				<div class="bg-red-50 text-red-700 px-4 py-2 rounded mb-4 text-sm">{ f.Error }</div>
 			}
 			<form method="POST" enctype="multipart/form-data" class="space-y-4 bg-white rounded-xl shadow p-6">
-				<div>
-					<label class="block text-sm font-medium text-gray-700 mb-1">Nombre</label>
-					<input type="text" name="name" value={ f.Name } required class="w-full border rounded-lg px-3 py-2"/>
+				<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+					<div>
+						<label class="block text-sm font-medium text-gray-700 mb-1">Nombre (ES)</label>
+						<input type="text" name="name" value={ f.Name } required class="w-full border rounded-lg px-3 py-2"/>
+					</div>
+					<div>
+						<label class="block text-sm font-medium text-gray-700 mb-1">Name (EN)</label>
+						<input type="text" name="name_en" value={ f.NameEN } class="w-full border rounded-lg px-3 py-2"/>
+					</div>
 				</div>
 				<div>
 					<label class="block text-sm font-medium text-gray-700 mb-1">Slug</label>
 					<input type="text" name="slug" value={ f.Slug } required class="w-full border rounded-lg px-3 py-2"/>
 					<p class="text-xs text-gray-400 mt-1">URL amigable. Ej: "teatro", "performance", "cine"</p>
 				</div>
-				<div>
-					<label class="block text-sm font-medium text-gray-700 mb-1">Descripción</label>
-					<textarea name="description" rows="3" class="w-full border rounded-lg px-3 py-2">{ f.Description }</textarea>
+				<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+					<div>
+						<label class="block text-sm font-medium text-gray-700 mb-1">Descripción (ES)</label>
+						<textarea name="description" rows="3" class="w-full border rounded-lg px-3 py-2">{ f.Description }</textarea>
+					</div>
+					<div>
+						<label class="block text-sm font-medium text-gray-700 mb-1">Description (EN)</label>
+						<textarea name="description_en" rows="3" class="w-full border rounded-lg px-3 py-2">{ f.DescriptionEN }</textarea>
+						<p class="text-xs text-gray-400 mt-1">Si dejás EN vacío, se usa el ES.</p>
+					</div>
 				</div>
 				<div>
 					<label class="block text-sm font-medium text-gray-700 mb-1">Orden</label>
@@ -193,12 +246,12 @@ templ AdminSectionFormPage(email string, f AdminSectionForm) {
 					</button>
 					<a href="/admin" class="px-6 py-2 rounded-lg border hover:bg-gray-50">Cancelar</a>
 					if !f.IsNew {
-						<form method="POST" action={ templ.SafeURL("/admin/sections/" + f.ID + "/delete") }
-							onsubmit="return confirm('¿Eliminar esta sección y todas sus obras?')">
-							<button type="submit" class="text-red-600 hover:text-red-800 px-4 py-2 text-sm">
-								Eliminar
-							</button>
-						</form>
+						<button type="submit"
+							formaction={ templ.SafeURL("/admin/sections/" + f.ID + "/delete") }
+							onclick="return confirm('¿Eliminar esta sección y todas sus obras?')"
+							class="ml-auto text-red-600 hover:text-red-800 px-4 py-2 text-sm">
+							Eliminar
+						</button>
 					}
 				</div>
 			</form>
@@ -308,35 +361,56 @@ templ AdminWorkFormPage(email string, f AdminWorkForm) {
 				</div>
 				<div class="grid grid-cols-2 gap-4">
 					<div>
-						<label class="block text-sm font-medium text-gray-700 mb-1">Título</label>
+						<label class="block text-sm font-medium text-gray-700 mb-1">Título (ES)</label>
 						<input type="text" name="title" value={ f.Title } required class="w-full border rounded-lg px-3 py-2"/>
 					</div>
 					<div>
-						<label class="block text-sm font-medium text-gray-700 mb-1">Slug</label>
-						<input type="text" name="slug" value={ f.Slug } required class="w-full border rounded-lg px-3 py-2"/>
+						<label class="block text-sm font-medium text-gray-700 mb-1">Title (EN)</label>
+						<input type="text" name="title_en" value={ f.TitleEN } class="w-full border rounded-lg px-3 py-2"/>
 					</div>
 				</div>
-				<div class="grid grid-cols-3 gap-4">
+				<div>
+					<label class="block text-sm font-medium text-gray-700 mb-1">Slug</label>
+					<input type="text" name="slug" value={ f.Slug } required class="w-full border rounded-lg px-3 py-2"/>
+				</div>
+				<div class="grid grid-cols-2 gap-4">
 					<div>
 						<label class="block text-sm font-medium text-gray-700 mb-1">Año</label>
 						<input type="text" name="year" value={ f.Year } class="w-full border rounded-lg px-3 py-2" placeholder="2024"/>
-					</div>
-					<div>
-						<label class="block text-sm font-medium text-gray-700 mb-1">Rol</label>
-						<input type="text" name="role" value={ f.Role } class="w-full border rounded-lg px-3 py-2" placeholder="Actriz, Directora..."/>
 					</div>
 					<div>
 						<label class="block text-sm font-medium text-gray-700 mb-1">Orden</label>
 						<input type="number" name="sort_order" value={ fmt.Sprintf("%d", f.SortOrder) } class="w-full border rounded-lg px-3 py-2"/>
 					</div>
 				</div>
-				<div>
-					<label class="block text-sm font-medium text-gray-700 mb-1">Descripción</label>
-					<textarea name="description" rows="4" class="w-full border rounded-lg px-3 py-2">{ f.Description }</textarea>
+				<div class="grid grid-cols-2 gap-4">
+					<div>
+						<label class="block text-sm font-medium text-gray-700 mb-1">Rol (ES)</label>
+						<input type="text" name="role" value={ f.Role } class="w-full border rounded-lg px-3 py-2" placeholder="Actriz, Directora..."/>
+					</div>
+					<div>
+						<label class="block text-sm font-medium text-gray-700 mb-1">Role (EN)</label>
+						<input type="text" name="role_en" value={ f.RoleEN } class="w-full border rounded-lg px-3 py-2" placeholder="Actress, Director..."/>
+					</div>
+				</div>
+				<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+					<div>
+						<label class="block text-sm font-medium text-gray-700 mb-1">Descripción (ES)</label>
+						<textarea name="description" rows="4" class="w-full border rounded-lg px-3 py-2">{ f.Description }</textarea>
+					</div>
+					<div>
+						<label class="block text-sm font-medium text-gray-700 mb-1">Description (EN)</label>
+						<textarea name="description_en" rows="4" class="w-full border rounded-lg px-3 py-2">{ f.DescriptionEN }</textarea>
+						<p class="text-xs text-gray-400 mt-1">Si dejás EN vacío, se usa el ES.</p>
+					</div>
 				</div>
 				<div>
 					<label class="block text-sm font-medium text-gray-700 mb-1">Créditos</label>
 					<textarea name="credits" rows="3" class="w-full border rounded-lg px-3 py-2" placeholder="Dramaturgia: ...\nDirección: ...">{ f.Credits }</textarea>
+				</div>
+				<div>
+					<label class="block text-sm font-medium text-gray-700 mb-1">Credits (EN)</label>
+					<textarea name="credits_en" rows="3" class="w-full border rounded-lg px-3 py-2" placeholder="Playwriting: ...\nDirection: ...">{ f.CreditsEN }</textarea>
 				</div>
 				<div class="flex items-center gap-4">
 					<div class="flex items-center gap-2">
@@ -358,26 +432,21 @@ templ AdminWorkFormPage(email string, f AdminWorkForm) {
 				</div>
 				<div>
 					<label class="block text-sm font-medium text-gray-700 mb-1">Imágenes</label>
-					if len(f.Images) > 0 {
-						<div id="images-grid" class="grid grid-cols-4 gap-2 mb-2">
-							for _, img := range f.Images {
-								<div class="relative group">
-									<img src={ img.URL } class="w-full h-24 object-cover rounded" alt=""/>
-									if !f.IsNew {
-										<button type="button"
-											hx-post={ "/admin/works/" + f.ID + "/images/delete" }
-											hx-vals={ fmt.Sprintf(`{"filename":"%s"}`, img.Filename) }
-											hx-target="#images-grid"
-											hx-swap="outerHTML"
-											class="absolute top-1 right-1 bg-red-600 text-white rounded-full w-5 h-5 text-xs opacity-0 group-hover:opacity-100">
-											x
-										</button>
-									}
-								</div>
-							}
-						</div>
+					if !f.IsNew && len(f.Images) > 0 {
+						@AdminWorkImagesGrid(f.ID, f.Images)
 					}
 					<input type="file" name="images" accept="image/*" multiple class="text-sm"/>
+					<p class="text-xs text-gray-500 mt-1">Al subir más imágenes se agregan al final. Para reordenar o eliminar, usá los botones ↑ ↓ × sobre cada thumbnail.</p>
+				</div>
+				<div>
+					<label class="block text-sm font-medium text-gray-700 mb-1">Video (mp4 / mov, opcional)</label>
+					<input type="file" name="video" accept="video/mp4,video/quicktime,video/webm" class="text-sm"/>
+					<p class="text-xs text-gray-500 mt-1"><label class="inline-flex items-center gap-1"><input type="checkbox" name="video_delete" value="1"/> borrar video actual</label></p>
+				</div>
+				<div>
+					<label class="block text-sm font-medium text-gray-700 mb-1">Dossier (PDF, opcional)</label>
+					<input type="file" name="dossier" accept="application/pdf" class="text-sm"/>
+					<p class="text-xs text-gray-500 mt-1"><label class="inline-flex items-center gap-1"><input type="checkbox" name="dossier_delete" value="1"/> borrar dossier actual</label></p>
 				</div>
 				<div class="flex gap-3 pt-4">
 					<button type="submit" class="bg-gray-900 text-white px-6 py-2 rounded-lg hover:bg-gray-800">
@@ -385,12 +454,12 @@ templ AdminWorkFormPage(email string, f AdminWorkForm) {
 					</button>
 					<a href="/admin/works" class="px-6 py-2 rounded-lg border hover:bg-gray-50">Cancelar</a>
 					if !f.IsNew {
-						<form method="POST" action={ templ.SafeURL("/admin/works/" + f.ID + "/delete") }
-							onsubmit="return confirm('¿Eliminar esta obra?')">
-							<button type="submit" class="text-red-600 hover:text-red-800 px-4 py-2 text-sm">
-								Eliminar
-							</button>
-						</form>
+						<button type="submit"
+							formaction={ templ.SafeURL("/admin/works/" + f.ID + "/delete") }
+							onclick="return confirm('¿Eliminar esta obra?')"
+							class="ml-auto text-red-600 hover:text-red-800 px-4 py-2 text-sm">
+							Eliminar
+						</button>
 					}
 				</div>
 			</form>
@@ -464,18 +533,36 @@ templ AdminWorkLinkForm(workID string) {
 // ---------- WORK IMAGES GRID (HTMX fragment) ----------
 
 templ AdminWorkImagesGrid(workID string, images []AdminImage) {
-	<div id="images-grid" class="grid grid-cols-4 gap-2 mb-2">
-		for _, img := range images {
-			<div class="relative group">
-				<img src={ img.URL } class="w-full h-24 object-cover rounded" alt=""/>
-				<button type="button"
-					hx-post={ "/admin/works/" + workID + "/images/delete" }
-					hx-vals={ fmt.Sprintf(`{"filename":"%s"}`, img.Filename) }
-					hx-target="#images-grid"
-					hx-swap="outerHTML"
-					class="absolute top-1 right-1 bg-red-600 text-white rounded-full w-5 h-5 text-xs opacity-0 group-hover:opacity-100">
-					x
-				</button>
+	<div id="images-grid" class="grid grid-cols-3 sm:grid-cols-4 gap-2 mb-2">
+		for i, img := range images {
+			<div class="relative group border border-gray-200 rounded overflow-hidden bg-gray-50">
+				<img src={ img.URL } class="w-full h-28 object-cover block" alt=""/>
+				<div class="absolute top-1 left-1 text-[10px] bg-black/60 text-white px-1.5 rounded">{ fmt.Sprintf("%d", i+1) }</div>
+				<div class="absolute top-1 right-1 flex gap-1 opacity-0 group-hover:opacity-100 transition">
+					if i > 0 {
+						<button type="button"
+							hx-post={ "/admin/works/" + workID + "/images/move" }
+							hx-vals={ fmt.Sprintf(`{"filename":"%s","dir":"up"}`, img.Filename) }
+							hx-target="#images-grid"
+							hx-swap="outerHTML"
+							class="bg-white/90 hover:bg-white text-gray-800 w-6 h-6 rounded text-xs leading-none border border-gray-300" title="Subir">↑</button>
+					}
+					if i < len(images)-1 {
+						<button type="button"
+							hx-post={ "/admin/works/" + workID + "/images/move" }
+							hx-vals={ fmt.Sprintf(`{"filename":"%s","dir":"down"}`, img.Filename) }
+							hx-target="#images-grid"
+							hx-swap="outerHTML"
+							class="bg-white/90 hover:bg-white text-gray-800 w-6 h-6 rounded text-xs leading-none border border-gray-300" title="Bajar">↓</button>
+					}
+					<button type="button"
+						hx-post={ "/admin/works/" + workID + "/images/delete" }
+						hx-vals={ fmt.Sprintf(`{"filename":"%s"}`, img.Filename) }
+						hx-target="#images-grid"
+						hx-swap="outerHTML"
+						hx-confirm="¿Eliminar esta imagen?"
+						class="bg-red-600 hover:bg-red-700 text-white w-6 h-6 rounded text-xs leading-none" title="Eliminar">×</button>
+				</div>
 			</div>
 		}
 	</div>
@@ -546,9 +633,15 @@ templ AdminPressFormPage(email string, f AdminPressForm) {
 				<div class="bg-red-50 text-red-700 px-4 py-2 rounded mb-4 text-sm">{ f.Error }</div>
 			}
 			<form method="POST" class="space-y-4 bg-white rounded-xl shadow p-6">
-				<div>
-					<label class="block text-sm font-medium text-gray-700 mb-1">Título</label>
-					<input type="text" name="title" value={ f.Title } required class="w-full border rounded-lg px-3 py-2"/>
+				<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+					<div>
+						<label class="block text-sm font-medium text-gray-700 mb-1">Título (ES)</label>
+						<input type="text" name="title" value={ f.Title } required class="w-full border rounded-lg px-3 py-2"/>
+					</div>
+					<div>
+						<label class="block text-sm font-medium text-gray-700 mb-1">Title (EN)</label>
+						<input type="text" name="title_en" value={ f.TitleEN } class="w-full border rounded-lg px-3 py-2"/>
+					</div>
 				</div>
 				<div class="grid grid-cols-2 gap-4">
 					<div>
@@ -564,9 +657,16 @@ templ AdminPressFormPage(email string, f AdminPressForm) {
 					<label class="block text-sm font-medium text-gray-700 mb-1">URL</label>
 					<input type="url" name="url" value={ f.URL } class="w-full border rounded-lg px-3 py-2"/>
 				</div>
-				<div>
-					<label class="block text-sm font-medium text-gray-700 mb-1">Extracto</label>
-					<textarea name="excerpt" rows="3" class="w-full border rounded-lg px-3 py-2">{ f.Excerpt }</textarea>
+				<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+					<div>
+						<label class="block text-sm font-medium text-gray-700 mb-1">Extracto (ES)</label>
+						<textarea name="excerpt" rows="3" class="w-full border rounded-lg px-3 py-2">{ f.Excerpt }</textarea>
+					</div>
+					<div>
+						<label class="block text-sm font-medium text-gray-700 mb-1">Excerpt (EN)</label>
+						<textarea name="excerpt_en" rows="3" class="w-full border rounded-lg px-3 py-2">{ f.ExcerptEN }</textarea>
+						<p class="text-xs text-gray-400 mt-1">Si dejás EN vacío, se usa el ES.</p>
+					</div>
 				</div>
 				<div class="grid grid-cols-2 gap-4">
 					<div>
@@ -588,12 +688,12 @@ templ AdminPressFormPage(email string, f AdminPressForm) {
 					</button>
 					<a href="/admin/press" class="px-6 py-2 rounded-lg border hover:bg-gray-50">Cancelar</a>
 					if !f.IsNew {
-						<form method="POST" action={ templ.SafeURL("/admin/press/" + f.ID + "/delete") }
-							onsubmit="return confirm('¿Eliminar esta nota?')">
-							<button type="submit" class="text-red-600 hover:text-red-800 px-4 py-2 text-sm">
-								Eliminar
-							</button>
-						</form>
+						<button type="submit"
+							formaction={ templ.SafeURL("/admin/press/" + f.ID + "/delete") }
+							onclick="return confirm('¿Eliminar esta nota?')"
+							class="ml-auto text-red-600 hover:text-red-800 px-4 py-2 text-sm">
+							Eliminar
+						</button>
 					}
 				</div>
 			</form>
@@ -616,14 +716,30 @@ templ AdminSettingsPage(email string, f AdminSettingsForm) {
 			<form method="POST" enctype="multipart/form-data" class="space-y-6 bg-white rounded-xl shadow p-6">
 				<fieldset class="space-y-4">
 					<legend class="text-lg font-semibold">General</legend>
-					<div class="grid grid-cols-2 gap-4">
+					<div>
+						<label class="block text-sm font-medium text-gray-700 mb-1">Nombre del sitio</label>
+						<input type="text" name="site_name" value={ f.SiteName } class="w-full border rounded-lg px-3 py-2"/>
+					</div>
+					<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
 						<div>
-							<label class="block text-sm font-medium text-gray-700 mb-1">Nombre del sitio</label>
-							<input type="text" name="site_name" value={ f.SiteName } class="w-full border rounded-lg px-3 py-2"/>
+							<label class="block text-sm font-medium text-gray-700 mb-1">Tagline (ES)</label>
+							<input type="text" name="tagline" value={ f.TagLine } class="w-full border rounded-lg px-3 py-2"/>
 						</div>
 						<div>
-							<label class="block text-sm font-medium text-gray-700 mb-1">Tagline</label>
-							<input type="text" name="tagline" value={ f.TagLine } class="w-full border rounded-lg px-3 py-2"/>
+							<label class="block text-sm font-medium text-gray-700 mb-1">Tagline (EN)</label>
+							<input type="text" name="tagline_en" value={ f.TagLineEN } class="w-full border rounded-lg px-3 py-2"/>
+						</div>
+					</div>
+					<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+						<div>
+							<label class="block text-sm font-medium text-gray-700 mb-1">Meta descripción (ES)</label>
+							<textarea name="meta_description" rows="3" maxlength="300" class="w-full border rounded-lg px-3 py-2">{ f.MetaDescription }</textarea>
+							<p class="text-xs text-gray-400 mt-1">Aparece en Google y al compartir el link. ~160 caracteres.</p>
+						</div>
+						<div>
+							<label class="block text-sm font-medium text-gray-700 mb-1">Meta description (EN)</label>
+							<textarea name="meta_description_en" rows="3" maxlength="300" class="w-full border rounded-lg px-3 py-2">{ f.MetaDescriptionEN }</textarea>
+							<p class="text-xs text-gray-400 mt-1">Si vacío, se usa la ES.</p>
 						</div>
 					</div>
 					<div>
@@ -657,6 +773,16 @@ templ AdminSettingsPage(email string, f AdminSettingsForm) {
 					<div>
 						<label class="block text-sm font-medium text-gray-700 mb-1">Dirección</label>
 						<input type="text" name="address" value={ f.Address } class="w-full border rounded-lg px-3 py-2"/>
+					</div>
+					<div>
+						<label class="inline-flex items-center gap-2 text-sm text-gray-700">
+							if f.ShowAddress {
+								<input type="checkbox" name="show_address" value="1" checked/>
+							} else {
+								<input type="checkbox" name="show_address" value="1"/>
+							}
+							Mostrar la dirección en la web pública
+						</label>
 					</div>
 				</fieldset>
 				<fieldset class="space-y-4">
@@ -697,6 +823,23 @@ templ AdminSettingsPage(email string, f AdminSettingsForm) {
 							}
 							<input type="file" name="hero_image" accept="image/*" class="text-sm"/>
 						</div>
+					</div>
+					<div class="mt-4 p-4 border border-gray-200 rounded-lg bg-gray-50">
+						<label class="block text-sm font-medium text-gray-700 mb-1">Imagen para compartir en redes (og:image)</label>
+						<p class="text-xs text-gray-500 mb-2">Es la thumbnail que se ve al pegar el link en WhatsApp, Facebook, Twitter, LinkedIn. Proporción recomendada 1.91:1 (ej. 1200×630). Si no subís una, se usa la primera imagen del carrusel hero.</p>
+						if f.OGImage != "" {
+							<img src={ f.OGImage } class="w-48 h-24 object-cover rounded mb-2 border" alt="og"/>
+						}
+						<input type="file" name="og_image" accept="image/*" class="text-sm"/>
+						if f.OGImage != "" {
+							<p class="text-xs text-gray-500 mt-1"><label class="inline-flex items-center gap-1"><input type="checkbox" name="og_image_delete" value="1"/> borrar (volver a usar la del hero)</label></p>
+						}
+					</div>
+					<div class="mt-4">
+						<label class="block text-sm font-medium text-gray-700 mb-1">Carrusel hero (hasta 8 imágenes)</label>
+						@templ.Raw(RenderHeroImagesGrid(f.HeroImages))
+						<input type="file" name="hero_images" accept="image/*" multiple class="text-sm"/>
+						<p class="text-xs text-gray-500 mt-1">Subir nuevas imágenes las <strong>agrega</strong> al final del carrusel. Para borrar o reordenar usá los botones sobre cada thumbnail.</p>
 					</div>
 				</fieldset>
 				<button type="submit" class="bg-gray-900 text-white px-6 py-2 rounded-lg hover:bg-gray-800">

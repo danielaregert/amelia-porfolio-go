@@ -11,6 +11,12 @@ func RegisterRoutes(r *router.Router[*core.RequestEvent], app *pocketbase.Pocket
 	r.GET("/", func(e *core.RequestEvent) error {
 		return publicHome(e, app)
 	})
+	r.GET("/en", func(e *core.RequestEvent) error {
+		return publicHome(e, app)
+	})
+	r.GET("/en/", func(e *core.RequestEvent) error {
+		return publicHome(e, app)
+	})
 
 	// --- Admin: auth ---
 	r.GET("/admin/login", func(e *core.RequestEvent) error {
@@ -67,6 +73,9 @@ func RegisterRoutes(r *router.Router[*core.RequestEvent], app *pocketbase.Pocket
 	})
 	r.POST("/admin/works/{id}/images/delete", func(e *core.RequestEvent) error {
 		return adminWorkImageDelete(e, app)
+	})
+	r.POST("/admin/works/{id}/images/move", func(e *core.RequestEvent) error {
+		return adminWorkImageMove(e, app)
 	})
 
 	// --- Admin: work links (HTMX) ---

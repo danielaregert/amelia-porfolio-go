@@ -213,8 +213,10 @@ func adminSectionNewSubmit(e *core.RequestEvent, app *pocketbase.PocketBase) err
 	}
 	rec := core.NewRecord(col)
 	rec.Set("name", f.Name)
+	rec.Set("name_en", f.NameEN)
 	rec.Set("slug", f.Slug)
 	rec.Set("description", sanitize.HTML(f.Description))
+	rec.Set("description_en", sanitize.HTML(f.DescriptionEN))
 	rec.Set("sort_order", f.SortOrder)
 	rec.Set("active", f.Active)
 	if files := uploadedFile(e.Request, "cover_image"); files != nil {
@@ -238,13 +240,15 @@ func adminSectionEditView(e *core.RequestEvent, app *pocketbase.PocketBase) erro
 		return e.NotFoundError("sección no encontrada", nil)
 	}
 	f := views.AdminSectionForm{
-		IsNew:       false,
-		ID:          rec.Id,
-		Name:        rec.GetString("name"),
-		Slug:        rec.GetString("slug"),
-		Description: rec.GetString("description"),
-		SortOrder:   rec.GetInt("sort_order"),
-		Active:      rec.GetBool("active"),
+		IsNew:         false,
+		ID:            rec.Id,
+		Name:          rec.GetString("name"),
+		NameEN:        rec.GetString("name_en"),
+		Slug:          rec.GetString("slug"),
+		Description:   rec.GetString("description"),
+		DescriptionEN: rec.GetString("description_en"),
+		SortOrder:     rec.GetInt("sort_order"),
+		Active:        rec.GetBool("active"),
 	}
 	if cover := rec.GetString("cover_image"); cover != "" {
 		f.CoverURL = "/api/files/sections/" + rec.Id + "/" + cover
@@ -277,8 +281,10 @@ func adminSectionEditSubmit(e *core.RequestEvent, app *pocketbase.PocketBase) er
 		}
 	}
 	rec.Set("name", f.Name)
+	rec.Set("name_en", f.NameEN)
 	rec.Set("slug", f.Slug)
 	rec.Set("description", sanitize.HTML(f.Description))
+	rec.Set("description_en", sanitize.HTML(f.DescriptionEN))
 	rec.Set("sort_order", f.SortOrder)
 	rec.Set("active", f.Active)
 	if files := uploadedFile(e.Request, "cover_image"); files != nil {
@@ -428,11 +434,15 @@ func adminWorkNewSubmit(e *core.RequestEvent, app *pocketbase.PocketBase) error 
 	rec := core.NewRecord(col)
 	rec.Set("section", f.SectionID)
 	rec.Set("title", f.Title)
+	rec.Set("title_en", f.TitleEN)
 	rec.Set("slug", f.Slug)
 	rec.Set("year", f.Year)
 	rec.Set("role", f.Role)
+	rec.Set("role_en", f.RoleEN)
 	rec.Set("description", sanitize.HTML(f.Description))
+	rec.Set("description_en", sanitize.HTML(f.DescriptionEN))
 	rec.Set("credits", f.Credits)
+	rec.Set("credits_en", f.CreditsEN)
 	rec.Set("sort_order", f.SortOrder)
 	rec.Set("active", f.Active)
 	rec.Set("featured", f.Featured)
@@ -457,19 +467,23 @@ func adminWorkEditView(e *core.RequestEvent, app *pocketbase.PocketBase) error {
 		return e.NotFoundError("obra no encontrada", nil)
 	}
 	f := views.AdminWorkForm{
-		IsNew:       false,
-		ID:          rec.Id,
-		SectionID:   rec.GetString("section"),
-		Title:       rec.GetString("title"),
-		Slug:        rec.GetString("slug"),
-		Year:        rec.GetString("year"),
-		Role:        rec.GetString("role"),
-		Description: rec.GetString("description"),
-		Credits:     rec.GetString("credits"),
-		SortOrder:   rec.GetInt("sort_order"),
-		Active:      rec.GetBool("active"),
-		Featured:    rec.GetBool("featured"),
-		Sections:    loadSectionOptions(app),
+		IsNew:         false,
+		ID:            rec.Id,
+		SectionID:     rec.GetString("section"),
+		Title:         rec.GetString("title"),
+		TitleEN:       rec.GetString("title_en"),
+		Slug:          rec.GetString("slug"),
+		Year:          rec.GetString("year"),
+		Role:          rec.GetString("role"),
+		RoleEN:        rec.GetString("role_en"),
+		Description:   rec.GetString("description"),
+		DescriptionEN: rec.GetString("description_en"),
+		Credits:       rec.GetString("credits"),
+		CreditsEN:     rec.GetString("credits_en"),
+		SortOrder:     rec.GetInt("sort_order"),
+		Active:        rec.GetBool("active"),
+		Featured:      rec.GetBool("featured"),
+		Sections:      loadSectionOptions(app),
 	}
 	for _, name := range rec.GetStringSlice("images") {
 		f.Images = append(f.Images, views.AdminImage{
@@ -517,11 +531,15 @@ func adminWorkEditSubmit(e *core.RequestEvent, app *pocketbase.PocketBase) error
 	}
 	rec.Set("section", f.SectionID)
 	rec.Set("title", f.Title)
+	rec.Set("title_en", f.TitleEN)
 	rec.Set("slug", f.Slug)
 	rec.Set("year", f.Year)
 	rec.Set("role", f.Role)
+	rec.Set("role_en", f.RoleEN)
 	rec.Set("description", sanitize.HTML(f.Description))
+	rec.Set("description_en", sanitize.HTML(f.DescriptionEN))
 	rec.Set("credits", f.Credits)
+	rec.Set("credits_en", f.CreditsEN)
 	rec.Set("sort_order", f.SortOrder)
 	rec.Set("active", f.Active)
 	rec.Set("featured", f.Featured)
@@ -580,6 +598,58 @@ func adminWorkImageDelete(e *core.RequestEvent, app *pocketbase.PocketBase) erro
 	rec.Set("images-", filename)
 	if err := app.Save(rec); err != nil {
 		return e.InternalServerError("error borrando imagen", err)
+	}
+	var imgs []views.AdminImage
+	for _, n := range rec.GetStringSlice("images") {
+		imgs = append(imgs, views.AdminImage{
+			URL:      "/api/files/works/" + rec.Id + "/" + n,
+			Filename: n,
+		})
+	}
+	e.Response.Header().Set("Content-Type", "text/html; charset=utf-8")
+	return views.AdminWorkImagesGrid(rec.Id, imgs).Render(context.Background(), e.Response)
+}
+
+func adminWorkImageMove(e *core.RequestEvent, app *pocketbase.PocketBase) error {
+	if _, ok := requireAdmin(e, app); !ok {
+		return nil
+	}
+	id := e.Request.PathValue("id")
+	rec, err := app.FindRecordById("works", id)
+	if err != nil {
+		return e.NotFoundError("obra no encontrada", nil)
+	}
+	if err := e.Request.ParseForm(); err != nil {
+		return e.BadRequestError("form inválido", err)
+	}
+	filename := e.Request.PostFormValue("filename")
+	dir := e.Request.PostFormValue("dir")
+	if filename == "" || (dir != "up" && dir != "down") {
+		return e.BadRequestError("filename y dir (up|down) requeridos", nil)
+	}
+	files := append([]string{}, rec.GetStringSlice("images")...)
+	idx := -1
+	for i, f := range files {
+		if f == filename {
+			idx = i
+			break
+		}
+	}
+	if idx < 0 {
+		return e.BadRequestError("filename no encontrado", nil)
+	}
+	newIdx := idx
+	if dir == "up" && idx > 0 {
+		newIdx = idx - 1
+	} else if dir == "down" && idx < len(files)-1 {
+		newIdx = idx + 1
+	}
+	if newIdx != idx {
+		files[idx], files[newIdx] = files[newIdx], files[idx]
+		rec.Set("images", files)
+		if err := app.Save(rec); err != nil {
+			return e.InternalServerError("error reordenando", err)
+		}
 	}
 	var imgs []views.AdminImage
 	for _, n := range rec.GetStringSlice("images") {
@@ -704,10 +774,12 @@ func adminPressNewSubmit(e *core.RequestEvent, app *pocketbase.PocketBase) error
 	}
 	rec := core.NewRecord(col)
 	rec.Set("title", f.Title)
+	rec.Set("title_en", f.TitleEN)
 	rec.Set("publication", f.Publication)
 	rec.Set("url", f.URL)
 	rec.Set("date", f.Date)
 	rec.Set("excerpt", sanitize.HTML(f.Excerpt))
+	rec.Set("excerpt_en", sanitize.HTML(f.ExcerptEN))
 	rec.Set("sort_order", f.SortOrder)
 	rec.Set("active", f.Active)
 	if err := app.Save(rec); err != nil {
@@ -731,10 +803,12 @@ func adminPressEditView(e *core.RequestEvent, app *pocketbase.PocketBase) error 
 		IsNew:       false,
 		ID:          rec.Id,
 		Title:       rec.GetString("title"),
+		TitleEN:     rec.GetString("title_en"),
 		Publication: rec.GetString("publication"),
 		URL:         rec.GetString("url"),
 		Date:        rec.GetString("date"),
 		Excerpt:     rec.GetString("excerpt"),
+		ExcerptEN:   rec.GetString("excerpt_en"),
 		SortOrder:   rec.GetInt("sort_order"),
 		Active:      rec.GetBool("active"),
 	}
@@ -761,10 +835,12 @@ func adminPressEditSubmit(e *core.RequestEvent, app *pocketbase.PocketBase) erro
 		return renderPressForm(e, user, f, "El título es obligatorio.")
 	}
 	rec.Set("title", f.Title)
+	rec.Set("title_en", f.TitleEN)
 	rec.Set("publication", f.Publication)
 	rec.Set("url", f.URL)
 	rec.Set("date", f.Date)
 	rec.Set("excerpt", sanitize.HTML(f.Excerpt))
+	rec.Set("excerpt_en", sanitize.HTML(f.ExcerptEN))
 	rec.Set("sort_order", f.SortOrder)
 	rec.Set("active", f.Active)
 	if err := app.Save(rec); err != nil {
@@ -917,6 +993,9 @@ func adminSettingsSubmit(e *core.RequestEvent, app *pocketbase.PocketBase) error
 	}
 	rec.Set("site_name", strings.TrimSpace(e.Request.PostFormValue("site_name")))
 	rec.Set("tagline", strings.TrimSpace(e.Request.PostFormValue("tagline")))
+	rec.Set("tagline_en", strings.TrimSpace(e.Request.PostFormValue("tagline_en")))
+	rec.Set("meta_description", strings.TrimSpace(e.Request.PostFormValue("meta_description")))
+	rec.Set("meta_description_en", strings.TrimSpace(e.Request.PostFormValue("meta_description_en")))
 	rec.Set("bio_es", sanitize.HTML(e.Request.PostFormValue("bio_es")))
 	rec.Set("bio_en", sanitize.HTML(e.Request.PostFormValue("bio_en")))
 	rec.Set("email", strings.TrimSpace(e.Request.PostFormValue("email")))
@@ -933,6 +1012,11 @@ func adminSettingsSubmit(e *core.RequestEvent, app *pocketbase.PocketBase) error
 	}
 	if files := uploadedFile(e.Request, "hero_image"); files != nil {
 		rec.Set("hero_image", files)
+	}
+	if file := uploadedFile(e.Request, "og_image"); file != nil {
+		rec.Set("og_image", file)
+	} else if e.Request.PostFormValue("og_image_delete") == "1" {
+		rec.Set("og_image", nil)
 	}
 	if files := uploadedFiles(e.Request, "hero_images"); len(files) > 0 {
 		rec.Set("+hero_images", files)
@@ -953,6 +1037,9 @@ func settingsToForm(rec *core.Record) views.AdminSettingsForm {
 	f := views.AdminSettingsForm{
 		SiteName:  rec.GetString("site_name"),
 		TagLine:   rec.GetString("tagline"),
+		TagLineEN:         rec.GetString("tagline_en"),
+		MetaDescription:   rec.GetString("meta_description"),
+		MetaDescriptionEN: rec.GetString("meta_description_en"),
 		BioES:     rec.GetString("bio_es"),
 		BioEN:     rec.GetString("bio_en"),
 		Email:     rec.GetString("email"),
@@ -977,6 +1064,9 @@ func settingsToForm(rec *core.Record) views.AdminSettingsForm {
 	if img := rec.GetString("hero_image"); img != "" {
 		f.HeroImage = "/api/files/site_settings/" + rec.Id + "/" + img
 	}
+	if img := rec.GetString("og_image"); img != "" {
+		f.OGImage = "/api/files/site_settings/" + rec.Id + "/" + img
+	}
 	return f
 }
 
@@ -985,12 +1075,14 @@ func settingsToForm(rec *core.Record) views.AdminSettingsForm {
 func readSectionForm(r *http.Request, isNew bool) views.AdminSectionForm {
 	order, _ := strconv.Atoi(r.PostFormValue("sort_order"))
 	return views.AdminSectionForm{
-		IsNew:       isNew,
-		Name:        strings.TrimSpace(r.PostFormValue("name")),
-		Slug:        strings.TrimSpace(r.PostFormValue("slug")),
-		Description: r.PostFormValue("description"),
-		SortOrder:   order,
-		Active:      r.PostFormValue("active") == "1",
+		IsNew:         isNew,
+		Name:          strings.TrimSpace(r.PostFormValue("name")),
+		NameEN:        strings.TrimSpace(r.PostFormValue("name_en")),
+		Slug:          strings.TrimSpace(r.PostFormValue("slug")),
+		Description:   r.PostFormValue("description"),
+		DescriptionEN: r.PostFormValue("description_en"),
+		SortOrder:     order,
+		Active:        r.PostFormValue("active") == "1",
 	}
 }
 
@@ -1004,17 +1096,21 @@ func renderSectionForm(e *core.RequestEvent, user *core.Record, f views.AdminSec
 func readWorkForm(r *http.Request, isNew bool) views.AdminWorkForm {
 	order, _ := strconv.Atoi(r.PostFormValue("sort_order"))
 	return views.AdminWorkForm{
-		IsNew:       isNew,
-		SectionID:   r.PostFormValue("section"),
-		Title:       strings.TrimSpace(r.PostFormValue("title")),
-		Slug:        strings.TrimSpace(r.PostFormValue("slug")),
-		Year:        strings.TrimSpace(r.PostFormValue("year")),
-		Role:        strings.TrimSpace(r.PostFormValue("role")),
-		Description: r.PostFormValue("description"),
-		Credits:     r.PostFormValue("credits"),
-		SortOrder:   order,
-		Active:      r.PostFormValue("active") == "1",
-		Featured:    r.PostFormValue("featured") == "1",
+		IsNew:         isNew,
+		SectionID:     r.PostFormValue("section"),
+		Title:         strings.TrimSpace(r.PostFormValue("title")),
+		TitleEN:       strings.TrimSpace(r.PostFormValue("title_en")),
+		Slug:          strings.TrimSpace(r.PostFormValue("slug")),
+		Year:          strings.TrimSpace(r.PostFormValue("year")),
+		Role:          strings.TrimSpace(r.PostFormValue("role")),
+		RoleEN:        strings.TrimSpace(r.PostFormValue("role_en")),
+		Description:   r.PostFormValue("description"),
+		DescriptionEN: r.PostFormValue("description_en"),
+		Credits:       r.PostFormValue("credits"),
+		CreditsEN:     r.PostFormValue("credits_en"),
+		SortOrder:     order,
+		Active:        r.PostFormValue("active") == "1",
+		Featured:      r.PostFormValue("featured") == "1",
 	}
 }
 
@@ -1030,10 +1126,12 @@ func readPressForm(r *http.Request, isNew bool) views.AdminPressForm {
 	return views.AdminPressForm{
 		IsNew:       isNew,
 		Title:       strings.TrimSpace(r.PostFormValue("title")),
+		TitleEN:     strings.TrimSpace(r.PostFormValue("title_en")),
 		Publication: strings.TrimSpace(r.PostFormValue("publication")),
 		URL:         strings.TrimSpace(r.PostFormValue("url")),
 		Date:        strings.TrimSpace(r.PostFormValue("date")),
 		Excerpt:     r.PostFormValue("excerpt"),
+		ExcerptEN:   r.PostFormValue("excerpt_en"),
 		SortOrder:   order,
 		Active:      r.PostFormValue("active") == "1",
 	}

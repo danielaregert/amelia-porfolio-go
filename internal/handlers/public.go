@@ -3,12 +3,31 @@ package handlers
 import (
 	"html/template"
 	"net/http"
+	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/pocketbase/pocketbase"
 	"github.com/pocketbase/pocketbase/core"
 )
+
+var yearRe = regexp.MustCompile(`\d{4}`)
+
+// latestYear extrae todos los años (4 dígitos) y devuelve el mayor.
+// Soporta "2024", "2022-2023", "2019, 2021", "2010-2009", etc.
+// Si no encuentra ninguno devuelve 0.
+func latestYear(s string) int {
+	matches := yearRe.FindAllString(s, -1)
+	max := 0
+	for _, y := range matches {
+		n, err := strconv.Atoi(y)
+		if err == nil && n > max {
+			max = n
+		}
+	}
+	return max
+}
 
 type pubLink struct {
 	Label, URL, Kind string
@@ -28,25 +47,33 @@ type pubWork struct {
 }
 
 type pubSection struct {
-	Name  string
-	Slug  string
-	Works []pubWork
+	Name        string
+	Slug        string
+	Description template.HTML
+	CoverURL    string
+	Works       []pubWork
 }
 
 type pubSite struct {
-	SiteName  string
-	Tagline   string
-	BioES     template.HTML
-	Email       string
-	Phone       string
-	Address     string
-	ShowAddress bool
-	Instagram   string
-	Facebook    string
-	HeroURL    string
-	HeroImages []string
-	Sections   []pubSection
-	Press     []pubPress
+	Locale       string        // "es" | "en"
+	OtherLocale  string        // el idioma inverso, para el link del toggle
+	OtherURL     string        // ruta equivalente en el otro idioma
+	SiteName        string
+	Tagline         string
+	MetaDescription string
+	OGImageURL      string
+	Bio             template.HTML
+	Email        string
+	Phone        string
+	Address      string
+	ShowAddress  bool
+	Instagram    string
+	Facebook     string
+	HeroURL      string
+	HeroImages   []string
+	Sections     []pubSection
+	Press        []pubPress
+	T            map[string]string // traducciones de la UI chrome
 }
 
 type pubPress struct {
@@ -61,15 +88,74 @@ func fileURL(collection, recordID, file string) string {
 	return "/api/files/" + collection + "/" + recordID + "/" + file
 }
 
-func loadPubSite(app *pocketbase.PocketBase) (*pubSite, error) {
-	site := &pubSite{SiteName: "Amelia Repetto", Tagline: "porfolio artístico"}
+// Traducciones de la UI chrome (no va a DB, hardcoded).
+var uiStrings = map[string]map[string]string{
+	"es": {
+		"bio": "Biografía", "contact": "Contacto", "notes": "Notas",
+		"address": "Dirección", "email": "Email", "phone": "Móvil",
+		"networks": "Redes", "back_top": "↑ volver arriba",
+		"download_dossier": "Descargar dossier (PDF)",
+		"press_heading": "Notas",
+		"toggle_title": "English version",
+	},
+	"en": {
+		"bio": "Biography", "contact": "Contact", "notes": "Press",
+		"address": "Address", "email": "Email", "phone": "Phone",
+		"networks": "Social", "back_top": "↑ back to top",
+		"download_dossier": "Download dossier (PDF)",
+		"press_heading": "Press",
+		"toggle_title": "Versión en español",
+	},
+}
+
+// tr devuelve el valor EN si existe y el locale es "en", sino el ES.
+func tr(rec interface{ GetString(string) string }, locale, field string) string {
+	if locale == "en" {
+		if v := rec.GetString(field + "_en"); v != "" {
+			return v
+		}
+	}
+	return rec.GetString(field)
+}
+
+func loadPubSite(app *pocketbase.PocketBase, locale string) (*pubSite, error) {
+	if locale != "es" && locale != "en" {
+		locale = "es"
+	}
+	other := "en"
+	if locale == "en" {
+		other = "es"
+	}
+	site := &pubSite{
+		Locale: locale, OtherLocale: other,
+		SiteName: "Amelia Repetto", Tagline: "porfolio artístico",
+		T: uiStrings[locale],
+	}
+	if locale == "en" {
+		site.OtherURL = "/"
+	} else {
+		site.OtherURL = "/en/"
+	}
 
 	// Settings
 	settings, err := app.FindFirstRecordByFilter("site_settings", "id != ''")
 	if err == nil && settings != nil {
 		site.SiteName = settings.GetString("site_name")
-		site.Tagline = settings.GetString("tagline")
-		site.BioES = template.HTML(settings.GetString("bio_es"))
+		if t := tr(settings, locale, "tagline"); t != "" {
+			site.Tagline = t
+		}
+		if md := tr(settings, locale, "meta_description"); md != "" {
+			site.MetaDescription = md
+		} else {
+			site.MetaDescription = site.SiteName + " · " + site.Tagline
+		}
+		bioField := "bio_es"
+		if locale == "en" {
+			if v := settings.GetString("bio_en"); v != "" {
+				bioField = "bio_en"
+			}
+		}
+		site.Bio = template.HTML(settings.GetString(bioField))
 		site.Email = settings.GetString("email")
 		site.Phone = settings.GetString("phone")
 		site.Address = settings.GetString("address")
@@ -84,6 +170,13 @@ func loadPubSite(app *pocketbase.PocketBase) (*pubSite, error) {
 		for _, f := range settings.GetStringSlice("hero_images") {
 			site.HeroImages = append(site.HeroImages, fileURL("site_settings", settings.Id, f))
 		}
+		if og := settings.GetString("og_image"); og != "" {
+			site.OGImageURL = fileURL("site_settings", settings.Id, og)
+		} else if len(site.HeroImages) > 0 {
+			site.OGImageURL = site.HeroImages[0]
+		} else if site.HeroURL != "" {
+			site.OGImageURL = site.HeroURL
+		}
 	}
 
 	// Sections
@@ -93,7 +186,14 @@ func loadPubSite(app *pocketbase.PocketBase) (*pubSite, error) {
 	}
 
 	for _, sec := range sections {
-		ps := pubSection{Name: sec.GetString("name"), Slug: sec.GetString("slug")}
+		ps := pubSection{
+			Name:        tr(sec, locale, "name"),
+			Slug:        sec.GetString("slug"),
+			Description: template.HTML(tr(sec, locale, "description")),
+		}
+		if cov := sec.GetString("cover_image"); cov != "" {
+			ps.CoverURL = fileURL("sections", sec.Id, cov)
+		}
 		works, err := app.FindRecordsByFilter("works",
 			"section = {:sec} && active = true",
 			"+sort_order", 500, 0,
@@ -101,11 +201,11 @@ func loadPubSite(app *pocketbase.PocketBase) (*pubSite, error) {
 		if err == nil {
 			for _, w := range works {
 				pw := pubWork{
-					Title:       w.GetString("title"),
+					Title:       tr(w, locale, "title"),
 					Year:        w.GetString("year"),
-					Role:        w.GetString("role"),
-					Description: template.HTML(w.GetString("description")),
-					Credits:     w.GetString("credits"),
+					Role:        tr(w, locale, "role"),
+					Description: template.HTML(tr(w, locale, "description")),
+					Credits:     tr(w, locale, "credits"),
 					Featured:    w.GetBool("featured"),
 				}
 				for _, f := range w.GetStringSlice("images") {
@@ -130,6 +230,10 @@ func loadPubSite(app *pocketbase.PocketBase) (*pubSite, error) {
 				ps.Works = append(ps.Works, pw)
 			}
 		}
+		// Ordenar por año más reciente (desc), manteniendo sort_order como desempate.
+		sort.SliceStable(ps.Works, func(i, j int) bool {
+			return latestYear(ps.Works[i].Year) > latestYear(ps.Works[j].Year)
+		})
 		site.Sections = append(site.Sections, ps)
 	}
 
@@ -138,11 +242,11 @@ func loadPubSite(app *pocketbase.PocketBase) (*pubSite, error) {
 	if err == nil {
 		for _, p := range press {
 			site.Press = append(site.Press, pubPress{
-				Title:       p.GetString("title"),
+				Title:       tr(p, locale, "title"),
 				Publication: p.GetString("publication"),
 				URL:         p.GetString("url"),
 				Date:        p.GetString("date"),
-				Excerpt:     template.HTML(p.GetString("excerpt")),
+				Excerpt:     template.HTML(tr(p, locale, "excerpt")),
 			})
 		}
 	}
@@ -158,9 +262,27 @@ var publicTmpl = template.Must(template.New("public").Funcs(template.FuncMap{
 }).Parse(publicHTML))
 
 func publicHome(e *core.RequestEvent, app *pocketbase.PocketBase) error {
-	site, err := loadPubSite(app)
+	locale := "es"
+	p := e.Request.URL.Path
+	if p == "/en" || p == "/en/" || strings.HasPrefix(p, "/en/") {
+		locale = "en"
+	}
+	site, err := loadPubSite(app, locale)
 	if err != nil {
 		return err
+	}
+	// URL absoluta para og:image / twitter:image.
+	if site.OGImageURL != "" && strings.HasPrefix(site.OGImageURL, "/") {
+		host := e.Request.Host
+		if fwd := e.Request.Header.Get("X-Forwarded-Host"); fwd != "" {
+			host = fwd
+		}
+		// https salvo loopback de desarrollo.
+		scheme := "https"
+		if strings.HasPrefix(host, "127.0.0.1") || strings.HasPrefix(host, "localhost") {
+			scheme = "http"
+		}
+		site.OGImageURL = scheme + "://" + host + site.OGImageURL
 	}
 	e.Response.Header().Set("Content-Type", "text/html; charset=utf-8")
 	e.Response.WriteHeader(http.StatusOK)
@@ -168,11 +290,30 @@ func publicHome(e *core.RequestEvent, app *pocketbase.PocketBase) error {
 }
 
 const publicHTML = `<!DOCTYPE html>
-<html lang="es">
+<html lang="{{.Locale}}">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{{.SiteName}} · {{.Tagline}}</title>
+<meta name="description" content="{{.MetaDescription}}">
+<link rel="alternate" hreflang="es" href="/">
+<link rel="alternate" hreflang="en" href="/en/">
+<link rel="alternate" hreflang="x-default" href="/">
+
+<!-- Open Graph (Facebook, WhatsApp, LinkedIn) -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="{{.SiteName}}">
+<meta property="og:title" content="{{.SiteName}} · {{.Tagline}}">
+<meta property="og:description" content="{{.MetaDescription}}">
+<meta property="og:locale" content="{{if eq .Locale "es"}}es_ES{{else}}en_US{{end}}">
+{{if .OGImageURL}}<meta property="og:image" content="{{.OGImageURL}}">
+<meta property="og:image:alt" content="{{.SiteName}}">{{end}}
+
+<!-- Twitter card -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="{{.SiteName}} · {{.Tagline}}">
+<meta name="twitter:description" content="{{.MetaDescription}}">
+{{if .OGImageURL}}<meta name="twitter:image" content="{{.OGImageURL}}">{{end}}
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Roboto+Slab:wght@100..900&display=swap" rel="stylesheet">
@@ -302,7 +443,53 @@ const publicHTML = `<!DOCTYPE html>
   .work .links{display:flex;flex-wrap:wrap;gap:.6rem 1rem;margin-top:.4rem}
   .work .links a{font-size:.82rem;letter-spacing:.06em;text-transform:uppercase}
   .work .imgs{margin-top:.9rem;display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:.4rem}
-  .work .imgs img{width:100%;height:auto;display:block;border:1px solid var(--line)}
+  .work .imgs img{width:100%;height:auto;display:block;border:1px solid var(--line);cursor:zoom-in;transition:opacity .2s}
+  .work .imgs img:hover{opacity:.85}
+
+  /* Lightbox modal con carrusel Flowbite */
+  .lb-backdrop{
+    position:fixed;inset:0;z-index:200;background:rgba(10,10,10,.92);
+    display:none;align-items:center;justify-content:center;
+  }
+  .lb-backdrop.open{display:flex}
+  body.lb-noscroll{overflow:hidden}
+  .lb-frame{position:relative;width:100%;height:100%;max-width:1400px;padding:3rem 1rem}
+  .lb-slide{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:3rem 1rem}
+  .lb-slide img{max-width:100%;max-height:100%;object-fit:contain;display:block;border:1px solid rgba(255,255,255,.08);background:#000}
+  .lb-close{
+    position:absolute;top:.8rem;right:.8rem;z-index:2;
+    width:42px;height:42px;border-radius:9999px;
+    background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);
+    color:#fff;font-size:1.4rem;line-height:1;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .lb-close:hover{background:rgba(255,255,255,.2)}
+  .lb-prev,.lb-next{
+    position:absolute;top:50%;transform:translateY(-50%);z-index:2;
+    width:48px;height:48px;border-radius:9999px;
+    background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);
+    color:#fff;font-size:1.6rem;line-height:1;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .lb-prev:hover,.lb-next:hover{background:rgba(255,255,255,.2)}
+  .lb-prev{left:1rem}.lb-next{right:1rem}
+  .lb-indicators{
+    position:absolute;bottom:1rem;left:50%;transform:translateX(-50%);z-index:2;
+    display:flex;gap:.4rem;
+  }
+  .lb-indicators button{
+    width:10px;height:10px;border-radius:9999px;
+    background:rgba(255,255,255,.35);border:0;cursor:pointer;padding:0;
+  }
+  .lb-indicators button[aria-current="true"]{background:#fff}
+  .lb-counter{
+    position:absolute;bottom:1rem;right:1rem;z-index:2;
+    color:rgba(255,255,255,.7);font-size:.8rem;letter-spacing:.05em;
+  }
+  @media (max-width:640px){
+    .lb-prev,.lb-next{width:40px;height:40px;font-size:1.3rem}
+    .lb-frame,.lb-slide{padding:3.2rem .6rem 2.6rem}
+  }
 
   /* Bio */
   .bio{display:grid;grid-template-columns:1fr;gap:2rem;align-items:start}
@@ -331,10 +518,11 @@ const publicHTML = `<!DOCTYPE html>
 
     <!-- Desktop links -->
     <ul class="hidden nav:flex items-center gap-6 list-none">
-      <li><a data-k="bio" class="nav-link text-[0.78rem] tracking-[0.14em] uppercase text-ink" href="#bio">Biografía</a></li>
+      <li><a data-k="bio" class="nav-link text-[0.78rem] tracking-[0.14em] uppercase text-ink" href="#bio">{{.T.bio}}</a></li>
       {{range .Sections}}<li><a data-k="{{.Slug}}" class="nav-link text-[0.78rem] tracking-[0.14em] uppercase text-ink" href="#{{.Slug}}">{{.Name}}</a></li>{{end}}
-      {{if .Press}}<li><a data-k="press" class="nav-link text-[0.78rem] tracking-[0.14em] uppercase text-ink" href="#press">Notas</a></li>{{end}}
-      <li><a data-k="contacto" class="nav-link text-[0.78rem] tracking-[0.14em] uppercase text-ink" href="#contacto">Contacto</a></li>
+      {{if .Press}}<li><a data-k="press" class="nav-link text-[0.78rem] tracking-[0.14em] uppercase text-ink" href="#press">{{.T.notes}}</a></li>{{end}}
+      <li><a data-k="contacto" class="nav-link text-[0.78rem] tracking-[0.14em] uppercase text-ink" href="#contacto">{{.T.contact}}</a></li>
+      <li><a href="{{.OtherURL}}" title="{{.T.toggle_title}}" class="nav-link text-[0.78rem] tracking-[0.14em] uppercase border border-line px-2 py-1 rounded">{{if eq .Locale "es"}}EN{{else}}ES{{end}}</a></li>
     </ul>
 
     <!-- Mobile burger -->
@@ -354,10 +542,11 @@ const publicHTML = `<!DOCTYPE html>
     <svg class="w-7 h-7" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 6l12 12M18 6L6 18"/></svg>
   </button>
   <ul class="h-full w-full flex flex-col items-center justify-center gap-6 list-none px-6 font-slab">
-    <li><a data-k="bio" class="nav-link text-2xl tracking-[0.12em] uppercase text-ink" href="#bio">Biografía</a></li>
+    <li><a data-k="bio" class="nav-link text-2xl tracking-[0.12em] uppercase text-ink" href="#bio">{{.T.bio}}</a></li>
     {{range .Sections}}<li><a data-k="{{.Slug}}" class="nav-link text-2xl tracking-[0.12em] uppercase text-ink" href="#{{.Slug}}">{{.Name}}</a></li>{{end}}
-    {{if .Press}}<li><a data-k="press" class="nav-link text-2xl tracking-[0.12em] uppercase text-ink" href="#press">Notas</a></li>{{end}}
-    <li><a data-k="contacto" class="nav-link text-2xl tracking-[0.12em] uppercase text-ink" href="#contacto">Contacto</a></li>
+    {{if .Press}}<li><a data-k="press" class="nav-link text-2xl tracking-[0.12em] uppercase text-ink" href="#press">{{.T.notes}}</a></li>{{end}}
+    <li><a data-k="contacto" class="nav-link text-2xl tracking-[0.12em] uppercase text-ink" href="#contacto">{{.T.contact}}</a></li>
+    <li><a href="{{.OtherURL}}" class="nav-link text-xl tracking-[0.2em] uppercase text-ink border border-line px-3 py-1 rounded">{{if eq .Locale "es"}}EN{{else}}ES{{end}}</a></li>
   </ul>
 </div>
 <script>
@@ -422,23 +611,25 @@ const publicHTML = `<!DOCTYPE html>
   </header>
 
   <section class="page" id="bio">
-    <h2>Biografía</h2>
+    <h2>{{.T.bio}}</h2>
     <div class="bio">
       <aside class="contact" id="contacto">
-        {{if .Email}}<p class="label">Email</p><p><a href="mailto:{{.Email}}">{{.Email}}</a></p>{{end}}
-        {{if .Phone}}<p class="label">Móvil</p><p>{{.Phone}}</p>{{end}}
-        {{if and .Address .ShowAddress}}<p class="label">Dirección</p><p>{{.Address}}</p>{{end}}
-        <p class="label">Redes</p>
+        {{if .Email}}<p class="label">{{.T.email}}</p><p><a href="mailto:{{.Email}}">{{.Email}}</a></p>{{end}}
+        {{if .Phone}}<p class="label">{{.T.phone}}</p><p>{{.Phone}}</p>{{end}}
+        {{if and .Address .ShowAddress}}<p class="label">{{.T.address}}</p><p>{{.Address}}</p>{{end}}
+        <p class="label">{{.T.networks}}</p>
         {{if .Instagram}}<p><a href="{{.Instagram}}" target="_blank" rel="noopener">Instagram</a></p>{{end}}
         {{if .Facebook}}<p><a href="{{.Facebook}}" target="_blank" rel="noopener">Facebook</a></p>{{end}}
       </aside>
-      <div class="text">{{.BioES}}</div>
+      <div class="text">{{.Bio}}</div>
     </div>
   </section>
 
   {{range .Sections}}
   <section class="page" id="{{.Slug}}">
     <h2>{{.Name}}</h2>
+    {{if .CoverURL}}<figure class="section-cover" style="margin:0 0 2rem;border:1px solid var(--line)"><img src="{{.CoverURL}}" alt="{{.Name}}" style="display:block;width:100%;height:auto;max-height:50vh;object-fit:cover"></figure>{{end}}
+    {{if .Description}}<div class="section-desc" style="font-size:1.05rem;color:var(--muted);max-width:720px;margin:0 0 2.2rem">{{.Description}}</div>{{end}}
     <div class="works">
       {{range .Works}}
       <article class="work">
@@ -459,14 +650,15 @@ const publicHTML = `<!DOCTYPE html>
         {{if .Links}}
         <div class="links">
           {{range .Links}}<a href="{{.URL}}" target="_blank" rel="noopener">{{.Label}}</a>{{end}}
-          {{if .DossierURL}}<a href="{{.DossierURL}}" target="_blank" rel="noopener">Descargar dossier (PDF)</a>{{end}}
+          {{if .DossierURL}}<a href="{{.DossierURL}}" target="_blank" rel="noopener">{{$.T.download_dossier}}</a>{{end}}
         </div>
         {{else}}
-        {{if .DossierURL}}<div class="links"><a href="{{.DossierURL}}" target="_blank" rel="noopener">Descargar dossier (PDF)</a></div>{{end}}
+        {{if .DossierURL}}<div class="links"><a href="{{.DossierURL}}" target="_blank" rel="noopener">{{$.T.download_dossier}}</a></div>{{end}}
         {{end}}
         {{if .Images}}
-        <div class="imgs">
-          {{range .Images}}<img src="{{.}}" loading="lazy" alt="">{{end}}
+        {{$title := .Title}}
+        <div class="imgs lb-gallery" data-title="{{$title}}">
+          {{range $i, $u := .Images}}<img src="{{$u}}" data-i="{{$i}}" loading="lazy" alt="{{$title}}">{{end}}
         </div>
         {{end}}
       </article>
@@ -477,7 +669,7 @@ const publicHTML = `<!DOCTYPE html>
 
   {{if .Press}}
   <section class="page" id="press">
-    <h2>Notas / Press</h2>
+    <h2>{{.T.press_heading}}</h2>
     <div class="press-list">
       {{range .Press}}
       <article>
@@ -493,8 +685,91 @@ const publicHTML = `<!DOCTYPE html>
 </main>
 
 <footer>
-  © {{.SiteName}} · <a href="#top">↑ volver arriba</a> · <a href="/admin">admin</a>
+  © {{.SiteName}} · <a href="#top">{{.T.back_top}}</a> · <a href="/admin">admin</a>
 </footer>
+
+<!-- Lightbox con carrusel Flowbite -->
+<div id="lb" class="lb-backdrop" role="dialog" aria-modal="true" aria-label="Galería">
+  <button id="lb-close" class="lb-close" aria-label="Cerrar">×</button>
+  <div id="lb-carousel" class="lb-frame relative">
+    <div id="lb-inner"></div>
+    <div id="lb-dots" class="lb-indicators"></div>
+    <div id="lb-counter" class="lb-counter"></div>
+    <button id="lb-prev" type="button" class="lb-prev" aria-label="Anterior">‹</button>
+    <button id="lb-next" type="button" class="lb-next" aria-label="Siguiente">›</button>
+  </div>
+</div>
+
+<script>
+  (function(){
+    var lb      = document.getElementById('lb');
+    var inner   = document.getElementById('lb-inner');
+    var dots    = document.getElementById('lb-dots');
+    var counter = document.getElementById('lb-counter');
+    var srcs = [], idx = 0;
+
+    function render(){
+      inner.innerHTML = '';
+      dots.innerHTML = '';
+      srcs.forEach(function(u, i){
+        var slide = document.createElement('div');
+        slide.className = 'lb-slide';
+        slide.style.display = (i === idx) ? 'flex' : 'none';
+        slide.innerHTML = '<img src="' + u + '" alt="">';
+        inner.appendChild(slide);
+
+        var dot = document.createElement('button');
+        dot.type = 'button';
+        dot.setAttribute('aria-label', 'Imagen ' + (i+1));
+        if (i === idx) dot.setAttribute('aria-current','true');
+        dot.addEventListener('click', function(){ show(i); });
+        dots.appendChild(dot);
+      });
+      counter.textContent = (idx+1) + ' / ' + srcs.length;
+    }
+    function show(n){
+      idx = (n + srcs.length) % srcs.length;
+      Array.from(inner.children).forEach(function(s, i){
+        s.style.display = (i === idx) ? 'flex' : 'none';
+      });
+      Array.from(dots.children).forEach(function(b, i){
+        if (i === idx) b.setAttribute('aria-current','true');
+        else b.removeAttribute('aria-current');
+      });
+      counter.textContent = (idx+1) + ' / ' + srcs.length;
+    }
+    function open(list, start){
+      if (!list.length) return;
+      srcs = list;
+      idx = start || 0;
+      render();
+      lb.classList.add('open');
+      document.body.classList.add('lb-noscroll');
+    }
+    function close(){
+      lb.classList.remove('open');
+      document.body.classList.remove('lb-noscroll');
+    }
+
+    document.querySelectorAll('.lb-gallery').forEach(function(g){
+      var imgs = Array.from(g.querySelectorAll('img'));
+      var list = imgs.map(function(i){ return i.src; });
+      imgs.forEach(function(el, k){
+        el.addEventListener('click', function(){ open(list, k); });
+      });
+    });
+    document.getElementById('lb-close').addEventListener('click', close);
+    document.getElementById('lb-prev').addEventListener('click', function(){ show(idx-1); });
+    document.getElementById('lb-next').addEventListener('click', function(){ show(idx+1); });
+    lb.addEventListener('click', function(e){ if (e.target === lb) close(); });
+    document.addEventListener('keydown', function(e){
+      if (!lb.classList.contains('open')) return;
+      if (e.key === 'Escape') close();
+      else if (e.key === 'ArrowLeft') show(idx-1);
+      else if (e.key === 'ArrowRight') show(idx+1);
+    });
+  })();
+</script>
 
 </body>
 </html>

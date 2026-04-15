@@ -1,0 +1,15 @@
+services:
+  amelia-porfolio:
+    build: .
+    container_name: amelia-porfolio
+    restart: unless-stopped
+    expose:
+      - "8090"
+    volumes:
+      - ./pb_data:/app/pb_data
+    networks:
+      - web
+
+networks:
+  web:
+    external: true
