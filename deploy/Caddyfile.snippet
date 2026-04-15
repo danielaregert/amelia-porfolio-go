@@ -6,6 +6,16 @@ http://ameporfolio.danielaregert.com.ar {
     encode gzip zstd
     reverse_proxy amelia-porfolio:8090
 
+    # Cabeceras de seguridad (defensa en profundidad; Go también las pone).
+    header {
+        X-Frame-Options "DENY"
+        X-Content-Type-Options "nosniff"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        Permissions-Policy "geolocation=(), microphone=(), camera=()"
+        # HSTS lo emite Cloudflare (termina TLS), no hace falta aquí.
+        -Server
+    }
+
     # Logs (opcional, ajustá la ruta si usás otro layout)
     log {
         output file /var/log/caddy/ameporfolio.log

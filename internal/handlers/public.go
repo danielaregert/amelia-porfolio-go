@@ -10,7 +10,16 @@ import (
 
 	"github.com/pocketbase/pocketbase"
 	"github.com/pocketbase/pocketbase/core"
+
+	"porfolio-amelia/internal/sanitize"
 )
+
+// safeHTML aplica sanitización en la capa de lectura como defensa en
+// profundidad: aunque los datos ya se sanean al guardar, re-sanear al leer
+// protege frente a edición directa de la BD o escrituras por la API de PB.
+func safeHTML(s string) template.HTML {
+	return template.HTML(sanitize.HTML(s))
+}
 
 var yearRe = regexp.MustCompile(`\d{4}`)
 
@@ -155,7 +164,7 @@ func loadPubSite(app *pocketbase.PocketBase, locale string) (*pubSite, error) {
 				bioField = "bio_en"
 			}
 		}
-		site.Bio = template.HTML(settings.GetString(bioField))
+		site.Bio = safeHTML(settings.GetString(bioField))
 		site.Email = settings.GetString("email")
 		site.Phone = settings.GetString("phone")
 		site.Address = settings.GetString("address")
@@ -189,7 +198,7 @@ func loadPubSite(app *pocketbase.PocketBase, locale string) (*pubSite, error) {
 		ps := pubSection{
 			Name:        tr(sec, locale, "name"),
 			Slug:        sec.GetString("slug"),
-			Description: template.HTML(tr(sec, locale, "description")),
+			Description: safeHTML(tr(sec, locale, "description")),
 		}
 		if cov := sec.GetString("cover_image"); cov != "" {
 			ps.CoverURL = fileURL("sections", sec.Id, cov)
@@ -204,7 +213,7 @@ func loadPubSite(app *pocketbase.PocketBase, locale string) (*pubSite, error) {
 					Title:       tr(w, locale, "title"),
 					Year:        w.GetString("year"),
 					Role:        tr(w, locale, "role"),
-					Description: template.HTML(tr(w, locale, "description")),
+					Description: safeHTML(tr(w, locale, "description")),
 					Credits:     tr(w, locale, "credits"),
 					Featured:    w.GetBool("featured"),
 				}
@@ -246,7 +255,7 @@ func loadPubSite(app *pocketbase.PocketBase, locale string) (*pubSite, error) {
 				Publication: p.GetString("publication"),
 				URL:         p.GetString("url"),
 				Date:        p.GetString("date"),
-				Excerpt:     template.HTML(tr(p, locale, "excerpt")),
+				Excerpt:     safeHTML(tr(p, locale, "excerpt")),
 			})
 		}
 	}
@@ -260,6 +269,31 @@ func loadPubSite(app *pocketbase.PocketBase, locale string) (*pubSite, error) {
 var publicTmpl = template.Must(template.New("public").Funcs(template.FuncMap{
 	"upper": strings.ToUpper,
 }).Parse(publicHTML))
+
+func publicRobots(e *core.RequestEvent) error {
+	host := e.Request.Host
+	if fwd := e.Request.Header.Get("X-Forwarded-Host"); fwd != "" {
+		host = fwd
+	}
+	scheme := "https"
+	if strings.HasPrefix(host, "127.0.0.1") || strings.HasPrefix(host, "localhost") {
+		scheme = "http"
+	}
+	body := "# robots.txt — portfolio de Amelia Repetto\n" +
+		"User-agent: *\n" +
+		"Allow: /\n" +
+		"Allow: /en/\n" +
+		"Disallow: /admin\n" +
+		"Disallow: /admin/\n" +
+		"Disallow: /_/\n" +
+		"Disallow: /api/\n" +
+		"\n" +
+		"Sitemap: " + scheme + "://" + host + "/sitemap.xml\n"
+	e.Response.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	e.Response.Header().Set("Cache-Control", "public, max-age=3600")
+	_, _ = e.Response.Write([]byte(body))
+	return nil
+}
 
 func publicHome(e *core.RequestEvent, app *pocketbase.PocketBase) error {
 	locale := "es"
@@ -715,7 +749,10 @@ const publicHTML = `<!DOCTYPE html>
         var slide = document.createElement('div');
         slide.className = 'lb-slide';
         slide.style.display = (i === idx) ? 'flex' : 'none';
-        slide.innerHTML = '<img src="' + u + '" alt="">';
+        var img = document.createElement('img');
+        img.src = u;
+        img.alt = '';
+        slide.appendChild(img);
         inner.appendChild(slide);
 
         var dot = document.createElement('button');

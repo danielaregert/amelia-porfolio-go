@@ -3,6 +3,8 @@ package handlers
 import (
 	"context"
 	"fmt"
+	"html"
+	"mime/multipart"
 	"net/http"
 	"strconv"
 	"strings"
@@ -43,7 +45,7 @@ func adminLoginView(e *core.RequestEvent, app *pocketbase.PocketBase) error {
 func renderLogin(errMsg string) string {
 	errBlock := ""
 	if errMsg != "" {
-		errBlock = `<div class="err">` + errMsg + `</div>`
+		errBlock = `<div class="err">` + html.EscapeString(errMsg) + `</div>`
 	}
 	return `<!DOCTYPE html>
 <html lang="es"><head>
@@ -219,7 +221,7 @@ func adminSectionNewSubmit(e *core.RequestEvent, app *pocketbase.PocketBase) err
 	rec.Set("description_en", sanitize.HTML(f.DescriptionEN))
 	rec.Set("sort_order", f.SortOrder)
 	rec.Set("active", f.Active)
-	if files := uploadedFile(e.Request, "cover_image"); files != nil {
+	if files := uploadedFile(e.Request, "cover_image", "image/"); files != nil {
 		rec.Set("cover_image", files)
 	}
 	if err := app.Save(rec); err != nil {
@@ -287,7 +289,7 @@ func adminSectionEditSubmit(e *core.RequestEvent, app *pocketbase.PocketBase) er
 	rec.Set("description_en", sanitize.HTML(f.DescriptionEN))
 	rec.Set("sort_order", f.SortOrder)
 	rec.Set("active", f.Active)
-	if files := uploadedFile(e.Request, "cover_image"); files != nil {
+	if files := uploadedFile(e.Request, "cover_image", "image/"); files != nil {
 		rec.Set("cover_image", files)
 	}
 	if err := app.Save(rec); err != nil {
@@ -446,7 +448,7 @@ func adminWorkNewSubmit(e *core.RequestEvent, app *pocketbase.PocketBase) error 
 	rec.Set("sort_order", f.SortOrder)
 	rec.Set("active", f.Active)
 	rec.Set("featured", f.Featured)
-	if files := uploadedFiles(e.Request, "images"); len(files) > 0 {
+	if files := uploadedFiles(e.Request, "images", "image/"); len(files) > 0 {
 		rec.Set("images", files)
 	}
 	if err := app.Save(rec); err != nil {
@@ -543,15 +545,15 @@ func adminWorkEditSubmit(e *core.RequestEvent, app *pocketbase.PocketBase) error
 	rec.Set("sort_order", f.SortOrder)
 	rec.Set("active", f.Active)
 	rec.Set("featured", f.Featured)
-	if files := uploadedFiles(e.Request, "images"); len(files) > 0 {
+	if files := uploadedFiles(e.Request, "images", "image/"); len(files) > 0 {
 		rec.Set("+images", files)
 	}
-	if file := uploadedFile(e.Request, "video"); file != nil {
+	if file := uploadedFile(e.Request, "video", "video/"); file != nil {
 		rec.Set("video", file)
 	} else if e.Request.PostFormValue("video_delete") == "1" {
 		rec.Set("video", nil)
 	}
-	if file := uploadedFile(e.Request, "dossier"); file != nil {
+	if file := uploadedFile(e.Request, "dossier", "application/pdf"); file != nil {
 		rec.Set("dossier", file)
 	} else if e.Request.PostFormValue("dossier_delete") == "1" {
 		rec.Set("dossier", nil)
@@ -1007,18 +1009,18 @@ func adminSettingsSubmit(e *core.RequestEvent, app *pocketbase.PocketBase) error
 	rec.Set("youtube", strings.TrimSpace(e.Request.PostFormValue("youtube")))
 	rec.Set("vimeo", strings.TrimSpace(e.Request.PostFormValue("vimeo")))
 	rec.Set("reel_url", strings.TrimSpace(e.Request.PostFormValue("reel_url")))
-	if files := uploadedFile(e.Request, "profile_image"); files != nil {
+	if files := uploadedFile(e.Request, "profile_image", "image/"); files != nil {
 		rec.Set("profile_image", files)
 	}
-	if files := uploadedFile(e.Request, "hero_image"); files != nil {
+	if files := uploadedFile(e.Request, "hero_image", "image/"); files != nil {
 		rec.Set("hero_image", files)
 	}
-	if file := uploadedFile(e.Request, "og_image"); file != nil {
+	if file := uploadedFile(e.Request, "og_image", "image/"); file != nil {
 		rec.Set("og_image", file)
 	} else if e.Request.PostFormValue("og_image_delete") == "1" {
 		rec.Set("og_image", nil)
 	}
-	if files := uploadedFiles(e.Request, "hero_images"); len(files) > 0 {
+	if files := uploadedFiles(e.Request, "hero_images", "image/"); len(files) > 0 {
 		rec.Set("+hero_images", files)
 	}
 	if err := app.Save(rec); err != nil {
@@ -1144,12 +1146,43 @@ func renderPressForm(e *core.RequestEvent, user *core.Record, f views.AdminPress
 	return views.AdminPressFormPage(user.GetString("email"), f).Render(context.Background(), e.Response)
 }
 
-func uploadedFile(r *http.Request, field string) *filesystem.File {
+// detectMIME lee los primeros 512 bytes del archivo subido para identificar
+// el tipo real por magic bytes, ignorando lo que declare el cliente.
+func detectMIME(h *multipart.FileHeader) string {
+	f, err := h.Open()
+	if err != nil {
+		return ""
+	}
+	defer f.Close()
+	buf := make([]byte, 512)
+	n, _ := f.Read(buf)
+	return http.DetectContentType(buf[:n])
+}
+
+// allowedMIME devuelve true si el archivo matchea alguno de los prefijos/tipos
+// permitidos. Si allow está vacío, acepta todo.
+func allowedMIME(h *multipart.FileHeader, allow []string) bool {
+	if len(allow) == 0 {
+		return true
+	}
+	mt := detectMIME(h)
+	for _, a := range allow {
+		if strings.HasPrefix(mt, a) {
+			return true
+		}
+	}
+	return false
+}
+
+func uploadedFile(r *http.Request, field string, allow ...string) *filesystem.File {
 	if r.MultipartForm == nil {
 		return nil
 	}
 	headers := r.MultipartForm.File[field]
 	if len(headers) == 0 || headers[0].Size == 0 {
+		return nil
+	}
+	if !allowedMIME(headers[0], allow) {
 		return nil
 	}
 	f, err := filesystem.NewFileFromMultipart(headers[0])
@@ -1159,7 +1192,7 @@ func uploadedFile(r *http.Request, field string) *filesystem.File {
 	return f
 }
 
-func uploadedFiles(r *http.Request, field string) []*filesystem.File {
+func uploadedFiles(r *http.Request, field string, allow ...string) []*filesystem.File {
 	if r.MultipartForm == nil {
 		return nil
 	}
@@ -1167,6 +1200,9 @@ func uploadedFiles(r *http.Request, field string) []*filesystem.File {
 	out := make([]*filesystem.File, 0, len(headers))
 	for _, h := range headers {
 		if h.Size == 0 {
+			continue
+		}
+		if !allowedMIME(h, allow) {
 			continue
 		}
 		f, err := filesystem.NewFileFromMultipart(h)

@@ -84,10 +84,24 @@ func (l *LoginLimiter) gcLocked() {
 	}
 }
 
+// ClientIP identifica al cliente para rate limiting. Se corre detrás de
+// Cloudflare Tunnel + Caddy, así que confiamos en cabeceras puestas por
+// proxies y NO en el primer valor de X-Forwarded-For (spoofable).
+//
+// Orden de preferencia:
+//  1. CF-Connecting-IP — puesto por Cloudflare Tunnel con la IP real del cliente.
+//  2. Último valor de X-Forwarded-For — el que agregó nuestro Caddy directo.
+//  3. X-Real-IP.
+//  4. r.RemoteAddr.
 func ClientIP(r *http.Request) string {
+	if cf := r.Header.Get("CF-Connecting-IP"); cf != "" {
+		return strings.TrimSpace(cf)
+	}
 	if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
 		parts := strings.Split(xff, ",")
-		return strings.TrimSpace(parts[0])
+		// El último hop lo agrega el proxy más cercano (nuestro Caddy),
+		// así que es el único confiable en esta cadena.
+		return strings.TrimSpace(parts[len(parts)-1])
 	}
 	if xri := r.Header.Get("X-Real-IP"); xri != "" {
 		return strings.TrimSpace(xri)
